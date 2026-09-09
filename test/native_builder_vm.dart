@@ -202,6 +202,49 @@ void registerNativeBuilderTests() {
       ],
     );
   });
+
+  test('invalidates a CMake cache from another package location', () {
+    final Directory root = Directory.systemTemp.createTempSync(
+      'imcodec-native-cmake-cache-',
+    );
+    addTearDown(() => root.deleteSync(recursive: true));
+    final Directory firstPackage = Directory('${root.path}/first')..createSync();
+    final Directory secondPackage = Directory('${root.path}/second')..createSync();
+    final Directory firstNative = Directory('${firstPackage.path}/native')..createSync();
+    Directory('${secondPackage.path}/native').createSync();
+    final Directory buildDirectory = Directory('${root.path}/build')..createSync();
+    File('${buildDirectory.path}/CMakeCache.txt').writeAsStringSync(
+      'CMAKE_HOME_DIRECTORY:INTERNAL=${firstNative.path}\n',
+    );
+    File('${buildDirectory.path}/sentinel').createSync();
+
+    invalidateCMakeCacheIfSourceChanged(
+      packageRoot: secondPackage,
+      buildDirectory: buildDirectory,
+    );
+
+    expect(buildDirectory.existsSync(), isFalse);
+  });
+
+  test('retains a CMake cache from the current package location', () {
+    final Directory root = Directory.systemTemp.createTempSync(
+      'imcodec-native-cmake-cache-',
+    );
+    addTearDown(() => root.deleteSync(recursive: true));
+    final Directory nativeDirectory = Directory('${root.path}/native')..createSync();
+    final Directory buildDirectory = Directory('${root.path}/build')..createSync();
+    final File cache = File('${buildDirectory.path}/CMakeCache.txt')
+      ..writeAsStringSync(
+        'CMAKE_HOME_DIRECTORY:INTERNAL=${nativeDirectory.path}\n',
+      );
+
+    invalidateCMakeCacheIfSourceChanged(
+      packageRoot: root,
+      buildDirectory: buildDirectory,
+    );
+
+    expect(cache.existsSync(), isTrue);
+  });
 }
 
 /// Creates a protocol-authentic [CodeConfig] and captures its CMake arguments.

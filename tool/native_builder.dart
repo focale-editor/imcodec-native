@@ -92,10 +92,17 @@ Future<File> buildNativeLibrary({
   required CodeConfig config,
 }) async {
   final String cmake = Platform.environment['IMCODEC_NATIVE_CMAKE'] ?? 'cmake';
+  invalidateCMakeCacheIfSourceChanged(
+    packageRoot: packageRoot,
+    buildDirectory: buildDirectory,
+  );
+  final Directory nativeDirectory = Directory.fromUri(
+    packageRoot.uri.resolve('native/'),
+  );
   stdout.writeln('Configuring bundled ImcodecNative codec engines...');
   await runBuildCommand(cmake, [
     '-S',
-    '${packageRoot.path}/native',
+    nativeDirectory.path,
     '-B',
     buildDirectory.path,
     '-DCMAKE_BUILD_TYPE=Release',
@@ -114,6 +121,52 @@ Future<File> buildNativeLibrary({
     throw StateError('Native compilation did not produce ${library.path}.');
   }
   return library;
+}
+
+/// Discards a CMake cache that belongs to another package location.
+///
+/// Dart's native-assets runner can retain the same shared output directory when
+/// a dependency changes between a path checkout and pub.dev. CMake records the
+/// absolute source path in its cache and refuses to reconfigure it elsewhere.
+void invalidateCMakeCacheIfSourceChanged({
+  required Directory packageRoot,
+  required Directory buildDirectory,
+}) {
+  final File cache = File('${buildDirectory.path}/CMakeCache.txt');
+  if (!cache.existsSync()) {
+    return;
+  }
+  final RegExpMatch? match = RegExp(
+    r'^CMAKE_HOME_DIRECTORY:INTERNAL=(.*)$',
+    multiLine: true,
+  ).firstMatch(cache.readAsStringSync());
+  if (match == null) {
+    return;
+  }
+  final Directory expected = Directory.fromUri(
+    packageRoot.uri.resolve('native/'),
+  );
+  if (_sameDirectory(match[1]!, expected.path)) {
+    return;
+  }
+  stdout.writeln(
+    'Discarding a CMake cache created for a different ImcodecNative location.',
+  );
+  buildDirectory.deleteSync(recursive: true);
+}
+
+bool _sameDirectory(String first, String second) {
+  try {
+    if (FileSystemEntity.identicalSync(first, second)) {
+      return true;
+    }
+  } on FileSystemException {
+    // Fall back to a lexical comparison when the cached source no longer exists.
+  }
+  String normalize(String path) => Directory(path).absolute.uri.normalizePath().toFilePath();
+  final String normalizedFirst = normalize(first);
+  final String normalizedSecond = normalize(second);
+  return Platform.isWindows ? normalizedFirst.toLowerCase() == normalizedSecond.toLowerCase() : normalizedFirst == normalizedSecond;
 }
 
 /// Bounds concurrent C++ compilation to avoid exhausting developer machines.
