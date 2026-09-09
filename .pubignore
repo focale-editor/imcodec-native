@@ -1,0 +1,10 @@
+.github/
+build/
+test/
+pubspec_overrides.yaml
+**/test/web_assets/
+third_party/sources/
+doc/
+docs/
+AGENTS.md
+analysis_options.yaml
