@@ -1,5 +1,10 @@
 # 📰 ImcodecNative changelog
 
+## v0.1.3
+Released on September 12, 2026.
+
+* **FIX**: Release the previous libaom and Kvazaar contexts before encoding another AVIF or HEIF colour or alpha plane. ([#5e1146e](https://github.com/focale-editor/imcodec-native/commit/5e1146e))
+
 ## v0.1.2
 Released on September 11, 2026.
 

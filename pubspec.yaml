@@ -1,6 +1,6 @@
 name: imcodec_native
 description: Optional AVIF, HEIF/HEIC, JPEG XL and WebP codecs for Imcodec, with bundled native and WebAssembly engines on all Flutter platforms.
-version: 0.1.2
+version: 0.1.3
 homepage: https://github.com/focale-editor/imcodec-native
 repository: https://github.com/focale-editor/imcodec-native
 
