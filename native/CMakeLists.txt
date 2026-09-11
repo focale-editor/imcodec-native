@@ -27,6 +27,14 @@ set(CONFIG_AV1_ENCODER 1 CACHE STRING "" FORCE)
 set(CONFIG_AV1_DECODER 1 CACHE STRING "" FORCE)
 set(ENABLE_NASM OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(aom)
+# libheif calls find_package(AOM); keep that lookup on the bundled target even
+# when the platform SDK exposes its own package configuration.
+add_library(AOM::aom ALIAS aom)
+set(AOM_FOUND TRUE)
+set(AOM_DECODER_FOUND TRUE)
+set(AOM_ENCODER_FOUND TRUE)
+set(AOM_INCLUDE_DIRS "${aom_SOURCE_DIR}")
+set(AOM_LIBRARIES aom)
 
 set(ENABLE_SDL OFF CACHE BOOL "" FORCE)
 set(ENABLE_DECODER OFF CACHE BOOL "" FORCE)

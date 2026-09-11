@@ -30,6 +30,7 @@ imcodec_source(kvazaar
 imcodec_source(aom
   URL https://storage.googleapis.com/aom-releases/libaom-3.14.1.tar.gz
   URL_HASH SHA256=44bf90dbd23e734d50e70a8c41c285193922938bd0d3bc2ee56764d181d55ef5
+  OVERRIDE_FIND_PACKAGE
   DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
 
 imcodec_source(libwebp

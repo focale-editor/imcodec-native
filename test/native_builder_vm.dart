@@ -36,6 +36,24 @@ void registerNativeBuilderTests() {
     );
   });
 
+  test('forces libheif to resolve the bundled AOM target', () {
+    final String sources = File(
+      'native/cmake/sources.cmake',
+    ).readAsStringSync();
+    final int aomStart = sources.indexOf('imcodec_source(aom');
+    final int webpStart = sources.indexOf('imcodec_source(libwebp');
+    expect(aomStart, greaterThanOrEqualTo(0));
+    expect(webpStart, greaterThan(aomStart));
+    final String aomDeclaration = sources.substring(aomStart, webpStart);
+    final String project = File('native/CMakeLists.txt').readAsStringSync();
+
+    expect(aomDeclaration, contains('OVERRIDE_FIND_PACKAGE'));
+    expect(project, contains('add_library(AOM::aom ALIAS aom)'));
+    expect(project, contains('set(AOM_FOUND TRUE)'));
+    expect(project, contains(r'set(AOM_INCLUDE_DIRS "${aom_SOURCE_DIR}")'));
+    expect(project, contains('set(AOM_LIBRARIES aom)'));
+  });
+
   test('corresponding-source links are dynamic and version-agnostic', () {
     final String pubspec = File('pubspec.yaml').readAsStringSync();
     final String sourceOffer = File('docs/SOURCE_OFFER.md').readAsStringSync();
