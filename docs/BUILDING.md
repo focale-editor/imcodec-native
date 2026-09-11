@@ -108,3 +108,19 @@ sniffing, format-owned inspection, optional registration, lossless RGBA, lossy
 HEIC alpha, native JPEG XL/WebP decoding, malformed inputs, output limits,
 runner-based encoding and background decoder workers.
 Platform build configurations are maintained in `.github/workflows/ci.yml`.
+
+## AVIF encoder context lifetime
+
+The pinned libheif 1.21.2 AOM plugin reuses an encoder for colour and alpha.
+CMake applies a checked, idempotent patch that zero-initializes its context and
+destroys an existing context before `aom_codec_enc_init` overwrites it. The
+plugin destructor still frees the last context. Removing the patch requires
+verifying equivalent ownership in the replacement upstream source.
+
+Rebuild both native libraries and bundled WebAssembly after this source change;
+an existing `.wasm` binary cannot acquire a source patch at runtime. Repeated
+AVIF exports with non-opaque RGBA inputs must accompany round-trip validation.
+
+The same ownership correction closes the preceding Kvazaar encoder and frees
+its configuration before HEIC alpha initialization replaces their pointers.
+Repeated HEIC exports are therefore included in the memory validation.

@@ -33,6 +33,35 @@ void main() {
     expect(inspectImage(encoded)?.width, source.width);
   });
 
+  test('repeated AVIF colour and alpha encodes preserve earlier outputs', () {
+    final Image source = testImage();
+    const AvifEncoder encoder = AvifEncoder();
+    const AvifEncodeOptions options = AvifEncodeOptions(lossless: true, speed: 9);
+    final Uint8List original = Uint8List.fromList(source.bytes);
+    final Uint8List first = encoder.encode(source, encodeOptions: options);
+    for (int iteration = 0; iteration < 8; iteration++) {
+      source.setPixelRgba(0, 0, iteration * 19, 255 - iteration, 37, iteration.isEven ? 0 : 127);
+      final Uint8List encoded = encoder.encode(source, encodeOptions: options);
+      expect(decodeAvif(encoded).bytes, source.bytes);
+    }
+    expect(decodeAvif(first).bytes, original);
+  });
+
+  test('repeated HEIC colour and alpha encodes preserve earlier outputs', () {
+    final Image source = testImage();
+    const HeifEncoder encoder = HeifEncoder();
+    final Uint8List first = encoder.encode(source);
+    final Uint8List original = Uint8List.fromList(decodeHeif(first).bytes);
+    for (int iteration = 0; iteration < 8; iteration++) {
+      source.setPixelRgba(0, 0, iteration * 19, 255 - iteration, 37, iteration.isEven ? 0 : 127);
+      final Image decoded = decodeHeif(encoder.encode(source));
+      for (int offset = 3; offset < source.bytes.length; offset += 4) {
+        expect(decoded.bytes[offset], source.bytes[offset]);
+      }
+    }
+    expect(decodeHeif(first).bytes, original);
+  });
+
   test('HEIC preserves dimensions and exact alpha with lossy colour', () {
     final Image source = testImage();
     final Uint8List encoded = encodeHeif(
