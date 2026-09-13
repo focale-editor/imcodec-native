@@ -1,5 +1,10 @@
 # 📰 ImcodecNative changelog
 
+## v0.1.4
+Released on September 13, 2026.
+
+* **DOCS**: Added contributing guide, package screenshot, and pubspec metadata. ([#eb4b102](https://github.com/focale-editor/imcodec-native/commit/eb4b102))
+
 ## v0.1.3
 Released on September 12, 2026.
 
