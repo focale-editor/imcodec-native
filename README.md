@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="screenshots/overview.png" alt="ImcodecNative package illustration" width="180">
+</p>
+
 # ImcodecNative
 
 Optional AVIF and HEIF/HEIC codecs, plus libjxl and libwebp codec replacements, for
@@ -203,3 +207,7 @@ LGPL sources and complete reconstruction material. See
 must retain applicable notices and satisfy the relevant source/relinking
 requirements. Codec software licenses do not grant all possible HEVC patent
 rights; assess your distribution's requirements.
+
+---
+
+Built for **[Focale](https://focale-editor.app)**, an advanced local image editor. Discover what these packages make possible in a real creative workflow.

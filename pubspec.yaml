@@ -4,6 +4,17 @@ version: 0.1.3
 homepage: https://github.com/focale-editor/imcodec-native
 repository: https://github.com/focale-editor/imcodec-native
 
+topics:
+  - image
+  - codec
+  - native-assets
+  - webassembly
+  - flutter
+
+screenshots:
+  - description: 'A flat illustration of native and WebAssembly image codecs.'
+    path: screenshots/overview.png
+
 executables:
   prepare_library: prepare_library
 
