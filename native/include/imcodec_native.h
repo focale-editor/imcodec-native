@@ -31,7 +31,8 @@ IMCODEC_EXPORT imcodec_result* imcodec_encode(const uint8_t* rgba, size_t size,
     size_t max_output_bytes);
 IMCODEC_EXPORT void imcodec_result_free(imcodec_result* result);
 /* Numbers: width, height, sample depth, source depth, data size, ICC size,
- * EXIF size, XMP size (field identifiers 0 through 7). */
+ * EXIF size, XMP size (fields 0 through 7), and colour model (field 8:
+ * 0 = RGB, 1 = CMYK). */
 IMCODEC_EXPORT size_t imcodec_result_number(const imcodec_result* result, int field);
 /* Byte vectors: raster/encoded data, ICC, EXIF, XMP. */
 IMCODEC_EXPORT const uint8_t* imcodec_result_data(const imcodec_result* result, int field);

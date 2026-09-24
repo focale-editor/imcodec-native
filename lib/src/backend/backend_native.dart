@@ -50,6 +50,7 @@ NativeResult execute(NativeRequest request) {
       height: nativeResultNumber(result, 1),
       depth: nativeResultNumber(result, 2),
       sourceDepth: nativeResultNumber(result, 3),
+      colorModel: nativeResultNumber(result, 8),
       bytes: _copyBuffer(result, 0) ?? Uint8List(0),
       iccProfile: _copyBuffer(result, 1),
       exifMetadata: _copyBuffer(result, 2),

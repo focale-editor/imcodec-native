@@ -43,6 +43,7 @@ self.onmessage = async ({data: request}) => {
       height: module._imcodec_result_number(result, 1),
       depth: module._imcodec_result_number(result, 2),
       sourceDepth: module._imcodec_result_number(result, 3),
+      colorModel: module._imcodec_result_number(result, 8),
       bytes: buffers[0], iccProfile: buffers[1],
       exifMetadata: buffers[2], xmpMetadata: buffers[3],
     }, buffers.filter(Boolean));

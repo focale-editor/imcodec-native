@@ -205,6 +205,7 @@ final class _WorkerRuntime {
           height: response.height,
           depth: response.depth,
           sourceDepth: response.sourceDepth,
+          colorModel: response.colorModel,
           bytes: response.bytes?.toDart.asUint8List() ?? Uint8List(0),
           iccProfile: response.iccProfile?.toDart.asUint8List(),
           exifMetadata: response.exifMetadata?.toDart.asUint8List(),
@@ -271,6 +272,7 @@ NativeResult execute(NativeRequest request) {
       height: module.number(result, 1),
       depth: module.number(result, 2),
       sourceDepth: module.number(result, 3),
+      colorModel: module.number(result, 8),
       bytes: _copyBuffer(module, result, 0) ?? Uint8List(0),
       iccProfile: _copyBuffer(module, result, 1),
       exifMetadata: _copyBuffer(module, result, 2),
@@ -384,6 +386,9 @@ extension type _WorkerResponse._(JSObject _) implements JSObject {
 
   /// Original sample depth.
   external int get sourceDepth;
+
+  /// Native process colour model.
+  external int get colorModel;
 
   /// Encoded bytes or decoded pixels.
   external JSArrayBuffer? get bytes;

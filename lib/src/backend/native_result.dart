@@ -16,6 +16,9 @@ final class NativeResult {
   /// Significant source depth reported by the container.
   final int sourceDepth;
 
+  /// Native process colour model: zero for RGB, one for CMYK.
+  final int colorModel;
+
   /// Encoded data or decoded pixels.
   final Uint8List bytes;
 
@@ -34,6 +37,7 @@ final class NativeResult {
     required this.height,
     required this.depth,
     required this.sourceDepth,
+    required this.colorModel,
     required this.bytes,
     this.iccProfile,
     this.exifMetadata,
@@ -47,7 +51,7 @@ final class NativeResult {
   DecodedImage toImageData() => DecodedImage(
     width: width,
     height: height,
-    colorModel: DecodedColorModel.rgb,
+    colorModel: colorModel == 1 ? DecodedColorModel.cmyk : DecodedColorModel.rgb,
     sampleFormat: switch (depth) {
       8 => DecodedSampleFormat.uint8,
       16 => DecodedSampleFormat.uint16,
@@ -64,7 +68,7 @@ final class NativeResult {
     width: width,
     height: height,
     bitsPerChannel: sourceDepth,
-    colorModel: DecodedColorModel.rgb,
+    colorModel: colorModel == 1 ? DecodedColorModel.cmyk : DecodedColorModel.rgb,
     iccProfile: iccProfile,
     exifMetadata: exifMetadata,
     xmpMetadata: xmpMetadata,

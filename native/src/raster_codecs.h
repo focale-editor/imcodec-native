@@ -13,6 +13,7 @@ struct imcodec_result {
   size_t height = 0;
   size_t depth = 8;
   size_t source_depth = 8;
+  size_t color_model = 0;  // 0 = RGB, 1 = CMYK.
   std::vector<uint8_t> buffers[4];
   char error[512] = {};
 };

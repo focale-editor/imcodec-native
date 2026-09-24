@@ -150,17 +150,23 @@ void read_tiff(imcodec_result& result, const uint8_t* bytes, size_t size,
   result.width = width;
   result.height = height;
   result.source_depth = bits;
+  const bool cmyk = photometric == PHOTOMETRIC_SEPARATED;
+  uint16_t inks = INKSET_CMYK;
+  if (cmyk) TIFFGetFieldDefaulted(image.get(), TIFFTAG_INKSET, &inks);
+  if (cmyk && inks != INKSET_CMYK) throw std::runtime_error("Unsupported TIFF ink set");
+  result.color_model = cmyk ? 1 : 0;
   tiff_blob(image.get(), TIFFTAG_ICCPROFILE, result.buffers[1], limits.icc);
   tiff_blob(image.get(), TIFFTAG_XMLPACKET, result.buffers[3], limits.metadata);
   if (inspect) return;
   const bool rgb = photometric == PHOTOMETRIC_RGB;
   const bool gray = photometric == PHOTOMETRIC_MINISBLACK || photometric == PHOTOMETRIC_MINISWHITE;
-  const unsigned colors = rgb ? 3 : 1;
-  const bool direct = (rgb || gray) && samples >= colors && samples <= colors + 1 &&
+  const unsigned colors = cmyk ? 4 : rgb ? 3 : 1;
+  const bool direct = (rgb || gray || cmyk) && samples >= colors && samples <= colors + 1 &&
       ((format == SAMPLEFORMAT_UINT && (bits == 8 || bits == 16)) || (format == SAMPLEFORMAT_IEEEFP && bits == 32));
-  if (!direct && limits.preserve && bits > 8) throw std::runtime_error("Unsupported high-depth TIFF sample layout");
+  if (!direct && limits.preserve && (bits > 8 || cmyk)) throw std::runtime_error("Unsupported exact TIFF sample layout");
   result.depth = direct && limits.preserve ? bits : 8;
-  result.buffers[0].resize(pixel_bytes(width, height, result.depth / 2, limits.pixels, limits.bytes));
+  const size_t output_channels = cmyk && limits.preserve && direct ? 5 : 4;
+  result.buffers[0].resize(pixel_bytes(width, height, output_channels * (result.depth / 8), limits.pixels, limits.bytes));
   if (orientation >= 5) std::swap(result.width, result.height);
   if (!direct) {
     // libtiff's compatibility raster is associated RGBA8. Normalize orientation
@@ -177,7 +183,13 @@ void read_tiff(imcodec_result& result, const uint8_t* bytes, size_t size,
       target[2] = alpha ? std::min(255u, (TIFFGetB(pixel) * 255u + alpha / 2) / alpha) : 0;
       target[3] = alpha;
     }
+    result.color_model = 0;
+    if (cmyk) result.buffers[1].clear();
     return;
+  }
+  if (cmyk && !limits.preserve) {
+    result.color_model = 0;
+    result.buffers[1].clear();
   }
   if (planar != PLANARCONFIG_CONTIG && planar != PLANARCONFIG_SEPARATE) throw std::runtime_error("Unsupported TIFF planar layout");
   uint16_t extra_count = 0;
@@ -210,7 +222,7 @@ void read_tiff(imcodec_result& result, const uint8_t* bytes, size_t size,
       if (decoded < 0 || size_t(decoded) < rows * stride) throw std::runtime_error("Incomplete TIFF block");
     }
     for (size_t row = 0; row < rows; ++row) for (size_t column = 0; column < columns; ++column) {
-      double values[4] = {0, 0, 0, 1};
+      double values[5] = {0, 0, 0, 0, 1};
       for (unsigned c = 0; c < samples; ++c) {
         const size_t offset = planes == 1 ? row * stride + (column * samples + c) * sample_bytes : c * block_size + row * stride + column * sample_bytes;
         values[c] = sample_value(block.data() + offset, bits, format);
@@ -220,10 +232,14 @@ void read_tiff(imcodec_result& result, const uint8_t* bytes, size_t size,
         if (photometric == PHOTOMETRIC_MINISWHITE) values[0] = 1 - values[0];
         values[1] = values[2] = values[0];
       }
-      values[3] = opacity;
-      if (associated) for (int c = 0; c < 3; ++c) values[c] = opacity > 0 ? values[c] / opacity : 0;
-      uint8_t* target = result.buffers[0].data() + oriented_pixel(x + column, y + row, width, height, orientation) * result.depth / 2;
-      for (int c = 0; c < 4; ++c) store_sample(target + c * (result.depth / 8), values[c], result.depth);
+      if (associated) for (unsigned c = 0; c < colors; ++c) values[c] = opacity > 0 ? values[c] / opacity : 0;
+      if (cmyk && !limits.preserve) {
+        const double black = 1 - values[3];
+        for (int c = 0; c < 3; ++c) values[c] = (1 - values[c]) * black;
+      }
+      values[output_channels - 1] = opacity;
+      uint8_t* target = result.buffers[0].data() + oriented_pixel(x + column, y + row, width, height, orientation) * output_channels * (result.depth / 8);
+      for (size_t c = 0; c < output_channels; ++c) store_sample(target + c * (result.depth / 8), values[c], result.depth);
     }
   }
   if (stream.failed) throw std::runtime_error(stream.error);

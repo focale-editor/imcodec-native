@@ -94,6 +94,36 @@ void main() {
     expect(const NativeTiffDecoder().decode(rasterFixture('bigTiff')).bytes, [0, 1, 127, 0, 30, 60, 90, 128, 255, 250, 240, 255, 99, 66, 33, 64]);
   });
 
+  for (final int bits in [8, 16, 32]) {
+    test('TIFF retains $bits-bit CMYK process samples and alpha', () {
+      final Uint8List input = _cmykTiff(bits);
+      const NativeTiffDecoder decoder = NativeTiffDecoder();
+      expect(decoder.inspect(input).colorModel, DecodedColorModel.cmyk);
+      expect(decoder.inspect(input).bitsPerChannel, bits);
+      final DecodedImage decoded = decoder.decodeData(input);
+      expect(decoded.colorModel, DecodedColorModel.cmyk);
+      expect(decodeImageData(input).bytes, decoded.bytes);
+      expect(inspectImage(input)?.colorModel, DecodedColorModel.cmyk);
+      expect(decoded.sampleFormat, switch (bits) {
+        8 => DecodedSampleFormat.uint8,
+        16 => DecodedSampleFormat.uint16,
+        _ => DecodedSampleFormat.float32,
+      });
+      expect(decoded.bytes.length, bits ~/ 8 * 5);
+      final ByteData data = ByteData.sublistView(decoded.bytes);
+      for (int channel = 0; channel < 5; channel++) {
+        final double actual = switch (bits) {
+          8 => data.getUint8(channel).toDouble() / 255,
+          16 => data.getUint16(channel * 2, Endian.little) / 65535,
+          _ => data.getFloat32(channel * 4, Endian.little),
+        };
+        expect(actual, closeTo([0.125, 0.25, 0.5, 0.75, 0.5][channel], 0.004));
+      }
+      expect(decoder.decode(input).bytes, [closeTo(56, 1), closeTo(48, 1), closeTo(32, 1), closeTo(128, 1)]);
+      expect(() => decoder.decodeData(input, maxDecodedBytes: bits ~/ 8 * 5 - 1), throwsA(isA<ImageCodecException>()));
+    });
+  }
+
   test('TIFF applies all eight orientations without altering straight alpha', () {
     for (int orientation = 1; orientation <= 8; orientation++) {
       final Image image = const NativeTiffDecoder().decode(rasterFixture('tiffOrientation$orientation'));
@@ -275,4 +305,61 @@ void _expectClose(Uint8List actual, Uint8List expected, int tolerance) {
   for (int i = 0; i < expected.length; i++) {
     expect(actual[i], closeTo(expected[i], tolerance), reason: 'sample $i');
   }
+}
+
+/// Writes one independent little-endian CMYK TIFF with straight alpha.
+Uint8List _cmykTiff(int bits) {
+  const int directoryOffset = 8;
+  const int entryCount = 12;
+  const int bitsOffset = directoryOffset + 2 + entryCount * 12 + 4;
+  const int formatsOffset = bitsOffset + 10;
+  const int pixelsOffset = formatsOffset + 10;
+  final Uint8List result = Uint8List(pixelsOffset + bits ~/ 8 * 5);
+  final ByteData data = ByteData.sublistView(result)
+    ..setUint8(0, 0x49)
+    ..setUint8(1, 0x49)
+    ..setUint16(2, 42, Endian.little)
+    ..setUint32(4, directoryOffset, Endian.little)
+    ..setUint16(directoryOffset, entryCount, Endian.little);
+  int entry = directoryOffset + 2;
+  void writeEntry(int tag, int type, int count, int value) {
+    data
+      ..setUint16(entry, tag, Endian.little)
+      ..setUint16(entry + 2, type, Endian.little)
+      ..setUint32(entry + 4, count, Endian.little);
+    if (type == 3 && count == 1) {
+      data.setUint16(entry + 8, value, Endian.little);
+    } else {
+      data.setUint32(entry + 8, value, Endian.little);
+    }
+    entry += 12;
+  }
+
+  writeEntry(256, 4, 1, 1);
+  writeEntry(257, 4, 1, 1);
+  writeEntry(258, 3, 5, bitsOffset);
+  writeEntry(259, 3, 1, 1);
+  writeEntry(262, 3, 1, 5);
+  writeEntry(273, 4, 1, pixelsOffset);
+  writeEntry(277, 3, 1, 5);
+  writeEntry(278, 4, 1, 1);
+  writeEntry(279, 4, 1, bits ~/ 8 * 5);
+  writeEntry(284, 3, 1, 1);
+  writeEntry(338, 3, 1, 2);
+  writeEntry(339, 3, 5, formatsOffset);
+  data.setUint32(entry, 0, Endian.little);
+  for (int channel = 0; channel < 5; channel++) {
+    data.setUint16(bitsOffset + channel * 2, bits, Endian.little);
+    data.setUint16(formatsOffset + channel * 2, bits == 32 ? 3 : 1, Endian.little);
+    final double value = [0.125, 0.25, 0.5, 0.75, 0.5][channel];
+    switch (bits) {
+      case 8:
+        data.setUint8(pixelsOffset + channel, (value * 255).round());
+      case 16:
+        data.setUint16(pixelsOffset + channel * 2, (value * 65535).round(), Endian.little);
+      default:
+        data.setFloat32(pixelsOffset + channel * 4, value, Endian.little);
+    }
+  }
+  return result;
 }

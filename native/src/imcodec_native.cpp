@@ -703,6 +703,7 @@ size_t imcodec_result_number(const imcodec_result* result, int field) {
     case 1: return result->height;
     case 2: return result->depth;
     case 3: return result->source_depth;
+    case 8: return result->color_model;
     case 4: case 5: case 6: case 7: return result->buffers[field - 4].size();
     default: return 0;
   }
