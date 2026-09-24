@@ -1,5 +1,10 @@
 # 📰 ImcodecNative changelog
 
+## v0.2.1
+Released on September 24, 2026.
+
+* **FIX**: Preserve CMYK channels, alpha, depth and colour model when decoding TIFF images.
+
 ## v0.2.0
 Released on September 24, 2026.
 
