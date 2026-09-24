@@ -46,9 +46,9 @@ List<NativeSourceArchive> readNativeSourceManifest(Directory packageRoot) {
         ),
       )
       .toList(growable: false);
-  if (sources.length != 9 || sources.map((source) => source.fileName).toSet().length != sources.length) {
+  if (sources.length != 17 || sources.map((source) => source.fileName).toSet().length != sources.length) {
     throw StateError(
-      'Expected nine uniquely named sources in ${manifest.path}.',
+      'Expected seventeen uniquely named sources in ${manifest.path}.',
     );
   }
   return sources;

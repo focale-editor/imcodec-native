@@ -55,6 +55,11 @@ class _CodecExampleState extends State<CodecExample> {
           ),
         ),
         codec.ImageFormat.webp => await codec.encodeWebPWith(runner, source),
+        codec.ImageFormat.png => await const codec.NativePngEncoder().encodeWith(runner, source),
+        codec.ImageFormat.jpeg => await const codec.NativeJpegEncoder().encodeWith(runner, source),
+        codec.ImageFormat.qoi => await const codec.NativeQoiEncoder().encodeWith(runner, source),
+        codec.ImageFormat.tiff => await const codec.NativeTiffEncoder().encodeWith(runner, source),
+        codec.ImageFormat.openExr => await const codec.NativeOpenExrEncoder().encodeWith(runner, source),
         _ => throw UnsupportedError('Unsupported demo format'),
       };
       final codec.Image decoded = switch (format) {
@@ -62,6 +67,11 @@ class _CodecExampleState extends State<CodecExample> {
         codec.NativeImageFormat.heif => await codec.decodeHeifAsync(bytes),
         codec.ImageFormat.jpegXl => await codec.decodeJpegXlAsync(bytes),
         codec.ImageFormat.webp => await codec.decodeWebPAsync(bytes),
+        codec.ImageFormat.png => await codec.decodePngAsync(bytes),
+        codec.ImageFormat.jpeg => await codec.decodeJpegAsync(bytes),
+        codec.ImageFormat.qoi => await codec.decodeQoiAsync(bytes),
+        codec.ImageFormat.tiff => await codec.decodeTiffAsync(bytes),
+        codec.ImageFormat.openExr => await codec.decodeOpenExrAsync(bytes),
         _ => throw UnsupportedError('Unsupported demo format'),
       };
       if (!mounted) {
@@ -98,7 +108,17 @@ class _CodecExampleState extends State<CodecExample> {
                 spacing: 12,
                 runSpacing: 12,
                 children: [
-                  for (final codec.ImageFormat format in [codec.NativeImageFormat.avif, codec.NativeImageFormat.heif, codec.ImageFormat.jpegXl, codec.ImageFormat.webp])
+                  for (final codec.ImageFormat format in [
+                    codec.NativeImageFormat.avif,
+                    codec.NativeImageFormat.heif,
+                    codec.ImageFormat.jpegXl,
+                    codec.ImageFormat.webp,
+                    codec.ImageFormat.png,
+                    codec.ImageFormat.jpeg,
+                    codec.ImageFormat.qoi,
+                    codec.ImageFormat.tiff,
+                    codec.ImageFormat.openExr,
+                  ])
                     FilledButton(onPressed: _busy ? null : () => _convert(format), child: Text(format.name)),
                 ],
               ),

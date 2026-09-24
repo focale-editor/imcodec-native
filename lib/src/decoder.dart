@@ -3,7 +3,12 @@ import 'dart:typed_data';
 import 'package:imcodec/imcodec.dart';
 import 'package:imcodec_native/src/codecs/avif.dart';
 import 'package:imcodec_native/src/codecs/heif.dart';
+import 'package:imcodec_native/src/codecs/jpeg.dart';
 import 'package:imcodec_native/src/codecs/jpeg_xl.dart';
+import 'package:imcodec_native/src/codecs/open_exr.dart';
+import 'package:imcodec_native/src/codecs/png.dart';
+import 'package:imcodec_native/src/codecs/qoi.dart';
+import 'package:imcodec_native/src/codecs/tiff.dart';
 import 'package:imcodec_native/src/codecs/webp.dart';
 
 /// Decodes the primary AVIF image to straight RGBA8.
@@ -185,6 +190,116 @@ Future<DecodedImage> decodeWebPDataAsync(
   int maxDecodedBytes = defaultMaxDecodedBytes,
   int maxIccProfileBytes = defaultMaxIccProfileBytes,
 }) => const NativeWebPDecoder().decodeDataAsync(
+  bytes,
+  decodeOptions: options,
+  maxDecodedBytes: maxDecodedBytes,
+  maxIccProfileBytes: maxIccProfileBytes,
+);
+
+/// Decodes the primary PNG image on an isolate or browser Worker.
+Future<Image> decodePngAsync(
+  Uint8List bytes, {
+  PngDecodeOptions? options,
+}) => const NativePngDecoder().decodeAsync(
+  bytes,
+  decodeOptions: options,
+);
+
+/// Preserves native PNG samples on an isolate or browser Worker.
+Future<DecodedImage> decodePngDataAsync(
+  Uint8List bytes, {
+  PngDecodeOptions? options,
+  int maxDecodedBytes = defaultMaxDecodedBytes,
+  int maxIccProfileBytes = defaultMaxIccProfileBytes,
+}) => const NativePngDecoder().decodeDataAsync(
+  bytes,
+  decodeOptions: options,
+  maxDecodedBytes: maxDecodedBytes,
+  maxIccProfileBytes: maxIccProfileBytes,
+);
+
+/// Decodes the primary JPEG image on an isolate or browser Worker.
+Future<Image> decodeJpegAsync(
+  Uint8List bytes, {
+  JpegDecodeOptions? options,
+}) => const NativeJpegDecoder().decodeAsync(
+  bytes,
+  decodeOptions: options,
+);
+
+/// Preserves native JPEG samples on an isolate or browser Worker.
+Future<DecodedImage> decodeJpegDataAsync(
+  Uint8List bytes, {
+  JpegDecodeOptions? options,
+  int maxDecodedBytes = defaultMaxDecodedBytes,
+  int maxIccProfileBytes = defaultMaxIccProfileBytes,
+}) => const NativeJpegDecoder().decodeDataAsync(
+  bytes,
+  decodeOptions: options,
+  maxDecodedBytes: maxDecodedBytes,
+  maxIccProfileBytes: maxIccProfileBytes,
+);
+
+/// Decodes the primary QOI image on an isolate or browser Worker.
+Future<Image> decodeQoiAsync(
+  Uint8List bytes, {
+  QoiDecodeOptions? options,
+}) => const NativeQoiDecoder().decodeAsync(
+  bytes,
+  decodeOptions: options,
+);
+
+/// Preserves native QOI samples on an isolate or browser Worker.
+Future<DecodedImage> decodeQoiDataAsync(
+  Uint8List bytes, {
+  QoiDecodeOptions? options,
+  int maxDecodedBytes = defaultMaxDecodedBytes,
+  int maxIccProfileBytes = defaultMaxIccProfileBytes,
+}) => const NativeQoiDecoder().decodeDataAsync(
+  bytes,
+  decodeOptions: options,
+  maxDecodedBytes: maxDecodedBytes,
+  maxIccProfileBytes: maxIccProfileBytes,
+);
+
+/// Decodes the primary TIFF image on an isolate or browser Worker.
+Future<Image> decodeTiffAsync(
+  Uint8List bytes, {
+  TiffDecodeOptions? options,
+}) => const NativeTiffDecoder().decodeAsync(
+  bytes,
+  decodeOptions: options,
+);
+
+/// Preserves native TIFF samples on an isolate or browser Worker.
+Future<DecodedImage> decodeTiffDataAsync(
+  Uint8List bytes, {
+  TiffDecodeOptions? options,
+  int maxDecodedBytes = defaultMaxDecodedBytes,
+  int maxIccProfileBytes = defaultMaxIccProfileBytes,
+}) => const NativeTiffDecoder().decodeDataAsync(
+  bytes,
+  decodeOptions: options,
+  maxDecodedBytes: maxDecodedBytes,
+  maxIccProfileBytes: maxIccProfileBytes,
+);
+
+/// Decodes the primary OpenEXR image on an isolate or browser Worker.
+Future<Image> decodeOpenExrAsync(
+  Uint8List bytes, {
+  OpenExrDecodeOptions? options,
+}) => const NativeOpenExrDecoder().decodeAsync(
+  bytes,
+  decodeOptions: options,
+);
+
+/// Preserves native OpenEXR samples on an isolate or browser Worker.
+Future<DecodedImage> decodeOpenExrDataAsync(
+  Uint8List bytes, {
+  OpenExrDecodeOptions? options,
+  int maxDecodedBytes = defaultMaxDecodedBytes,
+  int maxIccProfileBytes = defaultMaxIccProfileBytes,
+}) => const NativeOpenExrDecoder().decodeDataAsync(
   bytes,
   decodeOptions: options,
   maxDecodedBytes: maxDecodedBytes,

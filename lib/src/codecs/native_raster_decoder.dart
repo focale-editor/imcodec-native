@@ -4,7 +4,7 @@ import 'package:imcodec/imcodec.dart';
 import 'package:imcodec_native/src/backend/backend.dart' as backend;
 import 'package:imcodec_native/src/backend/native_request.dart';
 
-/// Shared bounded decoding for libjxl and libwebp.
+/// Shared bounded decoding for the bundled raster engines.
 abstract base class NativeRasterDecoder<Options extends RasterDecodeOptions> extends RasterDecoder<Options> {
   /// Maximum byte length of decoded samples.
   final int maxDecodedBytes;
@@ -23,6 +23,9 @@ abstract base class NativeRasterDecoder<Options extends RasterDecodeOptions> ext
 
   /// Encoded format accepted by this decoder.
   ImageFormat get format;
+
+  /// Whether the input signature is accepted by this native decoder.
+  bool matches(Uint8List bytes) => format.matches(bytes);
 
   @override
   Image decodeImage(Uint8List input, Options options) => backend
@@ -139,7 +142,7 @@ abstract base class NativeRasterDecoder<Options extends RasterDecodeOptions> ext
 
   /// Rejects another format before entering a bundled decoder.
   void _checkSignature(Uint8List bytes) {
-    if (!format.matches(bytes)) {
+    if (!matches(bytes)) {
       throw ImageCodecException('Expected ${format.name} image data');
     }
   }

@@ -1,4 +1,5 @@
 #include "imcodec_native.h"
+#include "raster_codecs.h"
 
 #include <libheif/heif.h>
 #include <jxl/decode.h>
@@ -17,17 +18,10 @@
 #include <stdexcept>
 #include <vector>
 
-// A result owns every byte returned through the C API, including error text.
-struct imcodec_result {
-  size_t width = 0;
-  size_t height = 0;
-  size_t depth = 8;
-  size_t source_depth = 8;
-  std::vector<uint8_t> buffers[4];
-  char error[512] = {};
-};
-
 namespace {
+using imcodec::Owned;
+using imcodec::pixel_bytes;
+using imcodec::Writer;
 
 // Throw only inside the shim; exported entry points translate exceptions.
 void check(heif_error error) {
@@ -43,9 +37,6 @@ struct HeifSession {
   ~HeifSession() { heif_deinit(); }
 };
 
-template <typename T, auto release>
-using Owned = std::unique_ptr<T, decltype(release)>;
-
 using Context = Owned<heif_context, heif_context_free>;
 using Handle = Owned<heif_image_handle, heif_image_handle_release>;
 using Raster = Owned<heif_image, heif_image_release>;
@@ -53,16 +44,6 @@ using Encoder = Owned<heif_encoder, heif_encoder_release>;
 using JxlDecoderInstance = Owned<JxlDecoder, JxlDecoderDestroy>;
 using WebPDemuxerInstance = Owned<WebPDemuxer, WebPDemuxDelete>;
 using WebPAnimationDecoder = Owned<WebPAnimDecoder, WebPAnimDecoderDelete>;
-
-// Verify arithmetic before allocating or passing dimensions to native codecs.
-size_t pixel_bytes(size_t width, size_t height, size_t bytes_per_pixel,
-                   size_t max_pixels, size_t max_bytes) {
-  if (!width || !height || !max_pixels || !max_bytes ||
-      width > max_pixels / height || width > max_bytes / height / bytes_per_pixel) {
-    throw std::runtime_error("Image dimensions exceed the pixel or decoded-byte limit");
-  }
-  return width * height * bytes_per_pixel;
-}
 
 // Apply libheif's own limits before parsing any attacker-controlled container.
 Context read_context(const uint8_t* bytes, size_t size, size_t max_pixels,
@@ -178,20 +159,6 @@ void copy_pixels(imcodec_result& result, heif_image* image,
 }
 
 // This writer never lets exceptions unwind into a codec callback.
-struct Writer {
-  std::vector<uint8_t>& bytes;
-  size_t limit;
-  bool append(const uint8_t* data, size_t size) noexcept {
-    if (size > limit - bytes.size()) return false;
-    try {
-      bytes.insert(bytes.end(), data, data + size);
-      return true;
-    } catch (...) {
-      return false;
-    }
-  }
-};
-
 heif_error write_heif(heif_context*, const void* data, size_t size, void* user) {
   if (!static_cast<Writer*>(user)->append(static_cast<const uint8_t*>(data), size)) {
     return {heif_error_Encoding_error, heif_suberror_Unspecified, "Encoded output exceeds its byte limit or available memory"};
@@ -604,8 +571,8 @@ void inspect_webp(imcodec_result& result, const uint8_t* bytes, size_t size,
 std::mutex& codec_mutex(int format) {
   static std::mutex heif_mutex;
   static std::mutex jxl_mutex;
-  static std::mutex webp_mutex;
-  return format == 3 ? jxl_mutex : format == 4 ? webp_mutex : heif_mutex;
+  static std::mutex raster_mutexes[6];
+  return format >= 4 && format <= 9 ? raster_mutexes[format - 4] : format == 3 ? jxl_mutex : heif_mutex;
 }
 
 // Result allocation failure is the only error represented by a null pointer.
@@ -647,6 +614,16 @@ imcodec_result* imcodec_decode(const uint8_t* bytes, size_t size, int format,
     } else if (format == 4) {
       decode_webp(result, bytes, size, max_pixels, max_decoded_bytes,
                   max_icc_bytes);
+    } else if (format == 5) {
+      imcodec::read_png(result, bytes, size, imcodec::RasterLimits{max_pixels, max_decoded_bytes, max_icc_bytes, 0, preserve_depth != 0}, false);
+    } else if (format == 6) {
+      imcodec::read_jpeg(result, bytes, size, imcodec::RasterLimits{max_pixels, max_decoded_bytes, max_icc_bytes, 0, preserve_depth != 0}, false);
+    } else if (format == 7) {
+      imcodec::read_qoi(result, bytes, size, imcodec::RasterLimits{max_pixels, max_decoded_bytes, max_icc_bytes, 0, preserve_depth != 0}, false);
+    } else if (format == 8) {
+      imcodec::read_tiff(result, bytes, size, imcodec::RasterLimits{max_pixels, max_decoded_bytes, max_icc_bytes, 0, preserve_depth != 0}, false);
+    } else if (format == 9) {
+      imcodec::read_exr(result, bytes, size, imcodec::RasterLimits{max_pixels, max_decoded_bytes, max_icc_bytes, 0, preserve_depth != 0}, false);
     } else {
       throw std::runtime_error("Unsupported decode format");
     }
@@ -671,6 +648,16 @@ imcodec_result* imcodec_inspect(const uint8_t* bytes, size_t size, int format,
       inspect_jxl(result, bytes, size, max_icc_bytes);
     } else if (format == 4) {
       inspect_webp(result, bytes, size, max_icc_bytes, max_metadata_bytes);
+    } else if (format == 5) {
+      imcodec::read_png(result, bytes, size, imcodec::RasterLimits{100000000, 400000000, max_icc_bytes, max_metadata_bytes, false}, true);
+    } else if (format == 6) {
+      imcodec::read_jpeg(result, bytes, size, imcodec::RasterLimits{100000000, 400000000, max_icc_bytes, max_metadata_bytes, false}, true);
+    } else if (format == 7) {
+      imcodec::read_qoi(result, bytes, size, imcodec::RasterLimits{100000000, 400000000, max_icc_bytes, max_metadata_bytes, false}, true);
+    } else if (format == 8) {
+      imcodec::read_tiff(result, bytes, size, imcodec::RasterLimits{100000000, 400000000, max_icc_bytes, max_metadata_bytes, false}, true);
+    } else if (format == 9) {
+      imcodec::read_exr(result, bytes, size, imcodec::RasterLimits{100000000, 400000000, max_icc_bytes, max_metadata_bytes, false}, true);
     } else {
       throw std::runtime_error("Unsupported inspection format");
     }
@@ -691,6 +678,16 @@ imcodec_result* imcodec_encode(const uint8_t* rgba, size_t size, int width, int 
     } else if (format == 4) {
       if (width > WEBP_MAX_DIMENSION || height > WEBP_MAX_DIMENSION) throw std::runtime_error("WebP dimensions exceed 16383 pixels");
       encode_webp(result, rgba, width, height, quality, lossless != 0, speed, max_output_bytes);
+    } else if (format == 5) {
+      imcodec::encode_png(result, rgba, width, height, speed, max_output_bytes);
+    } else if (format == 6) {
+      imcodec::encode_jpeg(result, rgba, width, height, quality, speed, max_output_bytes);
+    } else if (format == 7) {
+      imcodec::encode_qoi(result, rgba, width, height, max_output_bytes);
+    } else if (format == 8) {
+      imcodec::encode_tiff(result, rgba, width, height, speed, max_output_bytes);
+    } else if (format == 9) {
+      imcodec::encode_exr(result, rgba, width, height, speed, max_output_bytes);
     } else {
       throw std::runtime_error("Unsupported encode format");
     }
@@ -719,4 +716,4 @@ const char* imcodec_result_error(const imcodec_result* result) {
   return result ? result->error : "Could not allocate a native codec result";
 }
 
-const char* imcodec_version(void) { return "libheif 1.21.2; libaom 3.14.1; libde265 1.1.2; Kvazaar 2.3.2; libjxl 0.12.0; libwebp 1.6.0"; }
+const char* imcodec_version(void) { return "libheif 1.21.2; libaom 3.14.1; libde265 1.1.2; Kvazaar 2.3.2; libjxl 0.12.0; libwebp 1.6.0; libpng 1.6.58; libjpeg-turbo 3.2.0; QOI 97bacc8; libtiff 4.7.2; OpenEXR 3.4.14"; }

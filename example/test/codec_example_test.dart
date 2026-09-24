@@ -9,7 +9,7 @@ void main() {
 
   testWidgets('shows every optional encoder', (tester) async {
     await tester.pumpWidget(const CodecExample());
-    for (final String name in ['avif', 'heif', 'jpegXl', 'webp']) {
+    for (final String name in ['avif', 'heif', 'jpegXl', 'webp', 'png', 'jpeg', 'qoi', 'tiff', 'openExr']) {
       expect(find.text(name), findsOneWidget);
     }
   });

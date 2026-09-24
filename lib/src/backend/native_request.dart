@@ -22,7 +22,7 @@ final class NativeRequest {
   /// Requested bridge operation.
   final NativeOperation operation;
 
-  /// Bridge format identifier: AVIF, HEIF, JPEG XL, or WebP.
+  /// Stable format identifier documented by the shared C ABI.
   final int format;
 
   /// Encoded input or straight RGBA8 pixels.
@@ -100,6 +100,9 @@ final class NativeRequest {
         1 => 9,
         3 => 9,
         4 => 6,
+        6 || 8 => 1,
+        7 => 0,
+        9 => 3,
         _ => 9,
       };
       final int minimumSpeed = format == 3 ? 1 : 0;

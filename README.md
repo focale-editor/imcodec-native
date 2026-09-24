@@ -4,7 +4,8 @@
 
 # ImcodecNative
 
-Optional AVIF and HEIF/HEIC codecs, plus libjxl and libwebp codec replacements, for
+Optional AVIF and HEIF/HEIC codecs, plus native PNG, JPEG, JPEG XL, WebP, QOI,
+TIFF and OpenEXR codec replacements, for
 [Imcodec](https://github.com/focale-editor/imcodec). Imcodec itself remains
 pure Dart and never depends on this package.
 
@@ -32,6 +33,11 @@ final heic = img.encodeHeif(
 );
 final jxl = img.encodeJpegXl(image); // libjxl, lossless
 final webp = img.encodeWebP(image); // libwebp, lossless
+final png = img.encodePng(image); // libpng
+final jpeg = img.encodeJpeg(image); // libjpeg-turbo
+final qoi = img.encodeQoi(image); // reference QOI library
+final tiff = img.encodeTiff(image); // libtiff
+final exr = img.encodeOpenExr(image); // OpenEXR
 final lossyWebP = img.encodeWebP(
   image,
   options: const img.WebPEncodeOptions(quality: 82),
@@ -49,17 +55,25 @@ currently supported core and add-on formats.
 Select only the registrations you want:
 
 ```dart
-await img.ImcodecNative.initialize(jpegXl: false, webP: false);
+await img.ImcodecNative.initialize(
+  jpegXl: false,
+  webP: false,
+  png: true,
+  jpeg: true,
+  qoi: false,
+  tiff: true,
+  openExr: false,
+);
 ```
 
 These flags select registrations, not compiled components. Calls are additive.
 `ImcodecNative.unregister()` removes this package's current registrations and
-restores the original generic JPEG XL/WebP codecs. Registration replaces a
-complete generic codec entry, so registering JPEG XL or WebP replaces both its
-Dart encoder and decoder. Direct instances such as `const JpegXlCodec()` and
+restores the original generic Dart codecs. Registration replaces both the
+encoder and decoder of each selected format. Direct instances such as `const JpegXlCodec()` and
 `WebPCodec()` retain their Dart implementation. Dedicated `AvifCodec`,
-`HeifCodec`, `NativeJpegXlCodec` and `NativeWebPCodec` work without global
-registration.
+`HeifCodec`, `NativeJpegXlCodec`, `NativeWebPCodec`, `NativePngCodec`,
+`NativeJpegCodec`, `NativeQoiCodec`, `NativeTiffCodec` and `NativeOpenExrCodec`
+work without global registration.
 
 `NativeImageFormat.heic`, `HeicCodec`, `HeicEncoder`, `HeicDecoder` and the
 `encodeHeic`/`decodeHeic` helpers are aliases of their canonical HEIF spelling.
@@ -106,25 +120,33 @@ reuse one Worker and one Wasm instance, correlate concurrent requests, and
 replace the Worker after a transport failure. Codec errors affect only their
 own request.
 
-Encoding follows Imcodec's `encodeWith` convention. The AVIF, HEIF, JPEG XL and
-WebP `*With` helpers accept a `ParallelRunner` and submit one complete native
-operation to it without requiring codec registration in its worker isolate.
+Encoding follows Imcodec's `encodeWith` convention. Every native codec and
+encoder accepts a `ParallelRunner` and submits one complete native operation
+without requiring codec registration in its worker isolate. For example,
+`const NativeTiffEncoder().encodeWith(onBoundedIsolates, image)` encodes TIFF
+in the background. The existing generic PNG and JPEG `*With` helpers also
+use their registered native implementations.
 Output matches synchronous encoding byte for byte. `onBoundedIsolates` moves
 the operation off the calling isolate on native platforms; `runSequentially`
 keeps it inline, including in browsers.
 
 Native calls sharing an engine are serialized to protect its global tables;
-HEIF/AVIF, JPEG XL and WebP use separate locks. Browser Worker decode requests
+HEIF/AVIF share one lock; the other engines each have their own lock. Browser Worker decode requests
 are serialized inside the background Worker.
 
 ## Format behavior
 
-| Format    | Decoding                                                                                              | Encoding                                                        |
-|-----------|-------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------|
-| AVIF      | libheif + libaom; primary still image, alpha, 8/10/12-bit samples                                     | libaom; lossy 4:2:0 or lossless RGB 4:4:4; lossless alpha       |
-| HEIF/HEIC | libheif + libde265; primary HEVC still image, alpha, high depth                                       | Kvazaar; lossy 8-bit 4:2:0 colour, lossless alpha               |
-| JPEG XL   | libjxl; first visible frame, orientation, straight alpha, uint8/uint16/float32 samples and output ICC | libjxl; lossless RGBA, including RGB beneath transparent pixels |
-| WebP      | libwebp; still image or first composited animation frame, straight RGBA8                              | libwebp; lossless or lossy RGB, lossless alpha                  |
+| Format    | Decoding                                                                                                             | Encoding                                                                      |
+|-----------|----------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
+| AVIF      | libheif + libaom; primary still image, alpha, 8/10/12-bit samples                                                    | libaom; lossy 4:2:0 or lossless RGB 4:4:4; lossless alpha                     |
+| HEIF/HEIC | libheif + libde265; primary HEVC still image, alpha, high depth                                                      | Kvazaar; lossy 8-bit 4:2:0 colour, lossless alpha                             |
+| JPEG XL   | libjxl; first visible frame, orientation, straight alpha, uint8/uint16/float32 samples and output ICC                | libjxl; lossless RGBA, including RGB beneath transparent pixels               |
+| WebP      | libwebp; still image or first composited animation frame, straight RGBA8                                             | libwebp; lossless or lossy RGB, lossless alpha                                |
+| PNG       | libpng; palette/gray/RGB/RGBA, transparency, Adam7 and 8/16-bit samples                                              | libpng; lossless RGBA8, `PngEncodeOptions.level` 0–9                          |
+| JPEG      | libjpeg-turbo; baseline/progressive, grayscale/RGB and 8-bit CMYK; low-depth and 12/16-bit lossless samples          | libjpeg-turbo; baseline RGB, quality and 4:4:4/4:2:0 options; alpha discarded |
+| QOI       | Reference QOI library; RGB/RGBA with strict stream validation                                                        | Reference QOI library; lossless RGBA8, including hidden RGB                   |
+| TIFF      | libtiff; first directory, strips/tiles, separate/interleaved planes, all orientations, RGB/gray uint8/uint16/float32 | libtiff; straight RGBA8 with no compression or PackBits                       |
+| OpenEXR   | OpenEXR; single flat scanline/tiled image, RGB/RGBA or luminance, half/float samples                                 | OpenEXR; scene-linear RGBA half-float with none/ZIPS/ZIP compression          |
 
 HEIF is a container: HEVC and AV1 payloads are bundled, not arbitrary optional
 HEIF compression methods. Sequence-only brands and MP4 videos are not sniffed
@@ -132,7 +154,8 @@ as still images. Collections return the primary image; there is no animation,
 multi-image, depth-map or gain-map API. Crop, rotation and mirroring are applied
 by libheif. HEIC colour remains lossy even at quality 100.
 
-`decodeAvifData`, `decodeHeifData` and registered `decodeImageData` preserve
+`decodeAvifData`, `decodeHeifData`, native decoder `decodeData` methods and
+registered `decodeImageData` preserve
 high-depth input. HEIF-family and integer JPEG XL samples use little-endian,
 full-range uint16 RGBA; floating-point JPEG XL uses little-endian float32.
 Ten- and twelve-bit integer samples are normalized to 0–65535. Ordinary
@@ -142,11 +165,31 @@ describing its output pixels. NCLX-only HEIF colour descriptions are not
 exposed by Imcodec's current metadata model. Encoding accepts RGBA8 only and
 does not copy source metadata.
 
+The new codecs reuse Imcodec's `PngEncodeOptions`, `JpegEncodeOptions`,
+`QoiEncodeOptions`, `TiffEncodeOptions`, `OpenExrEncodeOptions` and corresponding
+decode options. Each native decoder exposes `decodeAsync` and `decodeDataAsync`,
+also available as `decodePngAsync`, `decodeJpegAsync`, `decodeQoiAsync`,
+`decodeTiffAsync`, `decodeOpenExrAsync` and their `*DataAsync` counterparts.
+
+OpenEXR follows Imcodec's working-colour contract: scene-linear authored
+primaries are converted to extended sRGB. `decodeData` retains HDR values in
+float32; ordinary decoding clips to RGBA8. Deep images, multipart files and
+subsampled colour channels are rejected. TIFF's high-depth path preserves RGB
+and grayscale samples; its compatibility path converts palette, CMYK and
+YCbCr to RGBA8 and undoes associated alpha. `NativeTiffDecoder` also accepts
+BigTIFF directly; Imcodec's generic signature detection currently recognizes
+classic TIFF only. JPEG CMYK conversion uses the conventional CMYK-to-RGB
+approximation and omits the source CMYK ICC from the converted RGB raster.
+TIFF EXIF directories are not serialized into EXIF packets.
+
 `inspectImage` retains bounded ICC, EXIF and XMP packets. EXIF is the opaque
 HEIF metadata payload, including its four-byte TIFF-offset prefix. Decoding
 attaches the ICC payload to `DecodedImage`. Pixel, decoded-byte, ICC,
 descriptive-metadata and encoded-output limits are checked independently;
-codec working memory is additional to the returned pixel buffer. Lower the
+codec working memory is additional to the returned pixel buffer. QOI's
+reference encoder reserves its worst-case output (five bytes per pixel plus
+22 bytes); `maxOutputBytes` must accommodate that reservation. TIFF and OpenEXR
+also check conversion/block allocations before decoding. Lower the
 defaults for untrusted images or constrained devices.
 
 ## Platform builds

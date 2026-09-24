@@ -14,6 +14,7 @@ set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 set(CMAKE_SKIP_INSTALL_RULES ON)
 
 include(cmake/sources.cmake)
+include(cmake/raster_engines.cmake)
 
 # Portable scalar AV1 avoids NASM and architecture-specific assembler setup.
 # Native builds still run codec work in isolates; Web builds need no pthreads.
@@ -186,7 +187,7 @@ FetchContent_MakeAvailable(brotli highway skcms)
 add_subdirectory("${libjxl_SOURCE_DIR}" "${libjxl_BINARY_DIR}" EXCLUDE_FROM_ALL)
 
 if(EMSCRIPTEN)
-  add_executable(imcodec_native src/imcodec_native.cpp)
+  add_executable(imcodec_native src/imcodec_native.cpp src/png.cpp src/jpeg.cpp src/qoi.cpp src/tiff.cpp src/open_exr.cpp)
   set_target_properties(imcodec_native PROPERTIES SUFFIX .mjs)
   target_compile_options(imcodec_native PRIVATE -fexceptions)
   target_link_options(imcodec_native PRIVATE
@@ -197,7 +198,7 @@ if(EMSCRIPTEN)
     -sEXPORTED_RUNTIME_METHODS=UTF8ToString,HEAPU8
     -sEXPORTED_FUNCTIONS=_malloc,_free,_imcodec_decode,_imcodec_encode,_imcodec_inspect,_imcodec_result_free,_imcodec_result_number,_imcodec_result_data,_imcodec_result_error,_imcodec_version)
 else()
-  add_library(imcodec_native SHARED src/imcodec_native.cpp)
+  add_library(imcodec_native SHARED src/imcodec_native.cpp src/png.cpp src/jpeg.cpp src/qoi.cpp src/tiff.cpp src/open_exr.cpp)
   if(ANDROID)
     # Keep the code asset self-contained and compatible with 16 KB page devices.
     target_link_options(imcodec_native PRIVATE
@@ -211,8 +212,8 @@ else()
     set_target_properties(imcodec_native PROPERTIES INSTALL_NAME_DIR "@rpath" BUILD_WITH_INSTALL_NAME_DIR ON)
   endif()
 endif()
-target_include_directories(imcodec_native PRIVATE include "${libheif_SOURCE_DIR}/libheif/api" "${libheif_BINARY_DIR}")
-target_link_libraries(imcodec_native PRIVATE heif jxl webp webpdemux)
+target_include_directories(imcodec_native PRIVATE include "${qoi_SOURCE_DIR}" "${libheif_SOURCE_DIR}/libheif/api" "${libheif_BINARY_DIR}")
+target_link_libraries(imcodec_native PRIVATE heif jxl webp webpdemux png_static imcodec_jpeg tiff OpenEXR::OpenEXR)
 set_target_properties(imcodec_native PROPERTIES
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/out"
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/out"
@@ -224,4 +225,6 @@ if(IMCODEC_BUILD_FIXTURES AND NOT EMSCRIPTEN)
   add_executable(imcodec_fixture_generator ../tool/fixture_generator.cpp)
   target_include_directories(imcodec_fixture_generator PRIVATE "${libheif_SOURCE_DIR}/libheif/api" "${libheif_BINARY_DIR}")
   target_link_libraries(imcodec_fixture_generator PRIVATE heif)
+  add_executable(imcodec_raster_fixture_generator ../tool/raster_fixture_generator.cpp)
+  target_link_libraries(imcodec_raster_fixture_generator PRIVATE OpenEXR::OpenEXR imcodec_jpeg)
 endif()

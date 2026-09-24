@@ -63,3 +63,48 @@ function(imcodec_declare_jxl_dependencies)
     SOURCE_SUBDIR __imcodec_download_only
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
 endfunction()
+
+imcodec_source(zlib
+  URL https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz
+  URL_HASH SHA256=bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16
+  OVERRIDE_FIND_PACKAGE
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+
+imcodec_source(libpng
+  URL https://github.com/pnggroup/libpng/archive/refs/tags/v1.6.58.tar.gz
+  URL_HASH SHA256=a9d4df463d36a6e5f9c29bd6f4967312d17e996c1854f3511f833924eb1993cf
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+
+imcodec_source(libjpeg
+  URL https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/3.2.0/libjpeg-turbo-3.2.0.tar.gz
+  URL_HASH SHA256=6f30092cef9fb839779646608f4ee14ae3cbac989c47fa05e841b0841f09878e
+  SOURCE_SUBDIR __imcodec_download_only
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+
+imcodec_source(libtiff
+  URL https://download.osgeo.org/libtiff/tiff-4.7.2.tar.gz
+  URL_HASH SHA256=672bd7d10aee4606171afb864f3570b83340f6a33e2c186dc0512f7145ffdf6a
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+
+imcodec_source(openexr
+  URL https://github.com/AcademySoftwareFoundation/openexr/releases/download/v3.4.14/openexr-3.4.14.tar.gz
+  URL_HASH SHA256=174d0d711d963c46eaa7cd2669d6cb1ea52579f43aa2726892f0b9554339ba6b
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+
+imcodec_source(imath
+  URL https://github.com/AcademySoftwareFoundation/Imath/releases/download/v3.2.3/Imath-3.2.3.tar.gz
+  URL_HASH SHA256=72f498e7073890a2a1b870e453908a07c9725f9d1384527043a38578bfb4ef31
+  OVERRIDE_FIND_PACKAGE
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+
+imcodec_source(libdeflate
+  URL https://github.com/ebiggers/libdeflate/releases/download/v1.26/libdeflate-1.26.tar.gz
+  URL_HASH SHA256=125856d4656e0feab660f94842f835923410c9281fedbcee64598c918da42b5a
+  OVERRIDE_FIND_PACKAGE
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+
+imcodec_source(qoi
+  URL https://github.com/phoboslab/qoi/archive/97bacc86a9c4abf5a2d452102dc26546c4c670b9.tar.gz
+  URL_HASH SHA256=32704988b24321c91114418e884a3fb61a7d0d0004f3ed07a91e73058022bc3b
+  SOURCE_SUBDIR __imcodec_download_only
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE)

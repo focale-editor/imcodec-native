@@ -16,7 +16,8 @@ extern "C" {
 
 /* All results, including errors, must be released with imcodec_result_free.
  * No borrowed input or result pointer survives a call to that function.
- * Formats: 1 = AVIF, 2 = HEIF/HEIC, 3 = JPEG XL, 4 = WebP.
+ * Formats: 1 = AVIF, 2 = HEIF/HEIC, 3 = JPEG XL, 4 = WebP,
+ * 5 = PNG, 6 = JPEG, 7 = QOI, 8 = TIFF, 9 = OpenEXR.
  * Every format supports decoding and encoding. No C++ exception crosses this
  * API. */
 typedef struct imcodec_result imcodec_result;

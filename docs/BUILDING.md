@@ -1,7 +1,7 @@
 # Building and validating ImcodecNative
 
 Published Pub packages contain no upstream source archives. The native build
-hook downloads all nine pinned archives over HTTPS into its shared cache and
+hook downloads all seventeen pinned archives over HTTPS into its shared cache and
 verifies their SHA-256 digests before CMake extracts them. A tagged repository
 revision additionally retains the exact libheif and libde265 archives required
 by their LGPL license; `.pubignore` keeps them out of the Pub package. The tag,
@@ -105,7 +105,8 @@ flutter test --platform chrome
 
 The same codec tests exercise actual bundled engines on native and Web:
 sniffing, format-owned inspection, optional registration, lossless RGBA, lossy
-HEIC alpha, native JPEG XL/WebP decoding, malformed inputs, output limits,
+HEIC alpha, native JPEG XL/WebP decoding, PNG/JPEG/QOI/TIFF/OpenEXR interoperability,
+high-depth/float rasters, malformed inputs, output limits,
 runner-based encoding and background decoder workers.
 Platform build configurations are maintained in `.github/workflows/ci.yml`.
 
@@ -124,3 +125,28 @@ AVIF exports with non-opaque RGBA inputs must accompany round-trip validation.
 The same ownership correction closes the preceding Kvazaar encoder and frees
 its configuration before HEIC alpha initialization replaces their pointers.
 Repeated HEIC exports are therefore included in the memory validation.
+
+## Additional raster fixtures
+
+`tool/raster_fixture_generator.py` creates original synthetic fixtures with
+Pillow, NumPy, tifffile and Python's zlib. Install those development-only tools
+in a virtual environment and run the script from the repository root, then
+format `test/raster_fixtures.dart`. The fixtures are embedded as base64 so the
+same interoperability tests run on the VM and in browsers.
+`tool/raster_fixture_generator.cpp` additionally creates lossless 4/12/16-bit
+JPEG and floating/tiled OpenEXR fixtures through the upstream APIs. Build its
+`imcodec_raster_fixture_generator` target with `IMCODEC_BUILD_FIXTURES=ON`;
+pass an output directory and base64-encode those files into
+`test/advanced_raster_fixtures.dart`. Tests also cross
+native encoders and decoders with direct Imcodec Dart codec instances.
+`tool/dart_raster_fixture_generator.dart` freezes reference files produced on
+the Dart VM for browsers: Imcodec 0.4.2's Dart OpenEXR path uses unsupported
+JavaScript uint64 accessors, and its Dart JPEG path differs in JavaScript.
+Native/WebAssembly codecs are exercised on both platforms, with independent
+reference files in the browser and live cross-encoding on the VM.
+
+The PNG, JPEG and TIFF engines share the pinned zlib/libjpeg archives. The
+libjpeg-turbo build runs through CMake ExternalProject because upstream does
+not support `add_subdirectory`; no platform JPEG library is linked. OpenEXR
+uses the pinned Imath and libdeflate targets, its vendored OpenJPH sources,
+and no internal worker threads.

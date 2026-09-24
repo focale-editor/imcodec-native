@@ -26,8 +26,8 @@ void registerNativeBuilderTests() {
       Directory.current,
     );
 
-    expect(sources, hasLength(9));
-    expect(sources.map((source) => source.name).toSet(), hasLength(9));
+    expect(sources, hasLength(17));
+    expect(sources.map((source) => source.name).toSet(), hasLength(17));
     expect(
       sources.every(
         (source) => source.uri.scheme == 'https' && RegExp(r'^[a-f0-9]{64}$').hasMatch(source.sha256),
