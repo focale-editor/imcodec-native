@@ -13,4 +13,8 @@ final class NativeJpegDecoder extends NativeRasterDecoder<JpegDecodeOptions> {
 
   @override
   ImageFormat get format => ImageFormat.jpeg;
+
+  /// libjpeg-turbo returns stored rows; the EXIF orientation is applied here.
+  @override
+  int orientationOf(Uint8List input) => jpegExifOrientation(input);
 }

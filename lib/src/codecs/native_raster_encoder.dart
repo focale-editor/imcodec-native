@@ -18,9 +18,16 @@ abstract base class NativeRasterEncoder<Options extends RasterEncodeOptions> ext
   /// Describes one encoding operation without retaining native pointers.
   NativeRequest createRequest(Image image, Options options);
 
+  /// Adds what the engine cannot write to its [encoded] output.
+  ///
+  /// Returns [encoded] by default. Runs on the calling isolate after the engine,
+  /// so the bridge stays unchanged when an option has no native counterpart.
+  Uint8List finishEncoding(Uint8List encoded, Options options) => encoded;
+
   @override
-  Uint8List encodeWithOptions(Image input, Options options) => _encodeRequest(
-    createRequest(input, options),
+  Uint8List encodeWithOptions(Image input, Options options) => finishEncoding(
+    _encodeRequest(createRequest(input, options)),
+    options,
   );
 
   @override
@@ -33,7 +40,7 @@ abstract base class NativeRasterEncoder<Options extends RasterEncodeOptions> ext
       [createRequest(input, options)],
       _encodeRequest,
     );
-    return results.single;
+    return finishEncoding(results.single, options);
   }
 }
 

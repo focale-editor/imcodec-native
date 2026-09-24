@@ -15,4 +15,11 @@ final class NativePngEncoder extends NativeRasterEncoder<PngEncodeOptions> {
     speed: options.level,
     maxOutputBytes: maxOutputBytes,
   );
+
+  /// The engine writes no density, so [PngEncodeOptions.pixelsPerInch] is added here.
+  @override
+  Uint8List finishEncoding(Uint8List encoded, PngEncodeOptions options) {
+    final double? pixelsPerInch = options.pixelsPerInch;
+    return pixelsPerInch == null ? encoded : pngWithPixelDensity(encoded, pixelsPerInch);
+  }
 }

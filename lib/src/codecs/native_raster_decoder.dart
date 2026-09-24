@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:imcodec/imcodec.dart';
 import 'package:imcodec_native/src/backend/backend.dart' as backend;
 import 'package:imcodec_native/src/backend/native_request.dart';
+import 'package:imcodec_native/src/codecs/raster_metadata.dart';
 
 /// Shared bounded decoding for the bundled raster engines.
 abstract base class NativeRasterDecoder<Options extends RasterDecodeOptions> extends RasterDecoder<Options> {
@@ -28,15 +29,26 @@ abstract base class NativeRasterDecoder<Options extends RasterDecodeOptions> ext
   /// Whether the input signature is accepted by this native decoder.
   bool matches(Uint8List bytes) => format.matches(bytes);
 
+  /// Display orientation the engine leaves for Dart to apply, from one to
+  /// eight.
+  ///
+  /// One by default, for engines that orient their own output or formats with
+  /// no orientation. Decoded pixels are rearranged to match Imcodec's Dart
+  /// decoders.
+  int orientationOf(Uint8List input) => 1;
+
   @override
-  Image decodeWithOptions(Uint8List input, Options options) => backend
-      .execute(
-        _request(
-          input,
-          options: options,
-        ),
-      )
-      .toImage();
+  Image decodeWithOptions(Uint8List input, Options options) => _orientImage(
+    input,
+    backend
+        .execute(
+          _request(
+            input,
+            options: options,
+          ),
+        )
+        .toImage(),
+  );
 
   /// Decodes native samples without reducing integer or floating precision.
   DecodedImage decodeData(
@@ -46,17 +58,20 @@ abstract base class NativeRasterDecoder<Options extends RasterDecodeOptions> ext
     int? maxIccProfileBytes,
   }) {
     final Options options = decodeOptions ?? defaultDecodeOptions;
-    return backend
-        .execute(
-          _request(
-            input,
-            options: options,
-            requestedMaxDecodedBytes: maxDecodedBytes,
-            requestedMaxIccProfileBytes: maxIccProfileBytes,
-            preserveDepth: true,
-          ),
-        )
-        .toImageData();
+    return _orientData(
+      input,
+      backend
+          .execute(
+            _request(
+              input,
+              options: options,
+              requestedMaxDecodedBytes: maxDecodedBytes,
+              requestedMaxIccProfileBytes: maxIccProfileBytes,
+              preserveDepth: true,
+            ),
+          )
+          .toImageData(),
+    );
   }
 
   /// Reads dimensions, source depth, and bounded colour metadata.
@@ -88,12 +103,15 @@ abstract base class NativeRasterDecoder<Options extends RasterDecodeOptions> ext
     Options? decodeOptions,
   }) async {
     final Options options = decodeOptions ?? defaultDecodeOptions;
-    return (await backend.executeAsync(
-      _request(
-        Uint8List.fromList(input),
-        options: options,
-      ),
-    )).toImage();
+    return _orientImage(
+      input,
+      (await backend.executeAsync(
+        _request(
+          Uint8List.fromList(input),
+          options: options,
+        ),
+      )).toImage(),
+    );
   }
 
   /// Preserves native samples on a native isolate or browser Worker.
@@ -104,15 +122,46 @@ abstract base class NativeRasterDecoder<Options extends RasterDecodeOptions> ext
     int? maxIccProfileBytes,
   }) async {
     final Options options = decodeOptions ?? defaultDecodeOptions;
-    return (await backend.executeAsync(
-      _request(
-        Uint8List.fromList(input),
-        options: options,
-        requestedMaxDecodedBytes: maxDecodedBytes,
-        requestedMaxIccProfileBytes: maxIccProfileBytes,
-        preserveDepth: true,
-      ),
-    )).toImageData();
+    return _orientData(
+      input,
+      (await backend.executeAsync(
+        _request(
+          Uint8List.fromList(input),
+          options: options,
+          requestedMaxDecodedBytes: maxDecodedBytes,
+          requestedMaxIccProfileBytes: maxIccProfileBytes,
+          preserveDepth: true,
+        ),
+      )).toImageData(),
+    );
+  }
+
+  /// Applies [orientationOf] to RGBA8 output.
+  Image _orientImage(Uint8List input, Image image) {
+    final int orientation = orientationOf(input);
+    if (orientation == 1) {
+      return image;
+    }
+    final ({Uint8List bytes, int width, int height}) oriented = orientPixels(image.bytes, image.width, image.height, orientation);
+    return Image.fromRgba(width: oriented.width, height: oriented.height, bytes: oriented.bytes, copy: false);
+  }
+
+  /// Applies [orientationOf] to samples of any depth and colour model.
+  DecodedImage _orientData(Uint8List input, DecodedImage image) {
+    final int orientation = orientationOf(input);
+    if (orientation == 1) {
+      return image;
+    }
+    final ({Uint8List bytes, int width, int height}) oriented = orientPixels(image.bytes, image.width, image.height, orientation);
+    return DecodedImage(
+      width: oriented.width,
+      height: oriented.height,
+      colorModel: image.colorModel,
+      sampleFormat: image.sampleFormat,
+      bytes: oriented.bytes,
+      iccProfile: image.iccProfile,
+      copy: false,
+    );
   }
 
   /// Constructs one validated pointer-free bridge request.

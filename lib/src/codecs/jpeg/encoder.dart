@@ -16,4 +16,11 @@ final class NativeJpegEncoder extends NativeRasterEncoder<JpegEncodeOptions> {
     speed: options.chroma == JpegChroma.yuv420 ? 1 : 0,
     maxOutputBytes: maxOutputBytes,
   );
+
+  /// The engine writes no density, so [JpegEncodeOptions.pixelsPerInch] is added here.
+  @override
+  Uint8List finishEncoding(Uint8List encoded, JpegEncodeOptions options) {
+    final double? pixelsPerInch = options.pixelsPerInch;
+    return pixelsPerInch == null ? encoded : jpegWithPixelDensity(encoded, pixelsPerInch);
+  }
 }
