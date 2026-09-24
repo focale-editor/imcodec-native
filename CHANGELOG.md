@@ -1,5 +1,11 @@
 # 📰 ImcodecNative changelog
 
+## v0.2.0
+Released on September 24, 2026.
+
+* **FEAT**: Added new native codecs for WebP, PNG, JPEG, QOI, TIFF and OpenEXR. ([#197cee2](https://github.com/focale-editor/imcodec-native/commit/197cee2))
+* **BREAKING CHORE**: Updated `imcodec`. ([#06f317c](https://github.com/focale-editor/imcodec-native/commit/06f317c))
+
 ## v0.1.4
 Released on September 13, 2026.
 
