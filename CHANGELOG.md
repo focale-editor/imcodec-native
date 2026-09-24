@@ -1,5 +1,10 @@
 # 📰 ImcodecNative changelog
 
+## v0.2.2
+Released on September 24, 2026.
+
+* **FEAT**: Now handling EXIF orientation in native JPEG decoding and record pixel density in PNG, JPEG, and TIFF encoders. ([#185f05c](https://github.com/focale-editor/imcodec-native/commit/185f05c))
+
 ## v0.2.1
 Released on September 24, 2026.
 
