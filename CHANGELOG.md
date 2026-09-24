@@ -3,7 +3,7 @@
 ## v0.2.1
 Released on September 24, 2026.
 
-* **FIX**: Preserve CMYK channels, alpha, depth and colour model when decoding TIFF images.
+* **FIX**: Now preserving CMYK channels, alpha, depth and colour model when decoding TIFF images. ([#1677a2c](https://github.com/focale-editor/imcodec-native/commit/1677a2c))
 
 ## v0.2.0
 Released on September 24, 2026.
