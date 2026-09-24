@@ -3,7 +3,7 @@ part of '../avif.dart';
 /// Encodes straight RGBA8 as lossy or mathematically lossless AVIF.
 final class AvifEncoder extends NativeRasterEncoder<AvifEncodeOptions> {
   /// Creates an AVIF encoder with a bounded output allocation.
-  const AvifEncoder({super.maxOutputBytes});
+  const AvifEncoder({super.maxOutputBytes}) : super(defaultEncodeOptions: const AvifEncodeOptions());
 
   @override
   NativeRequest createRequest(Image image, AvifEncodeOptions options) => NativeRequest(
@@ -17,9 +17,6 @@ final class AvifEncoder extends NativeRasterEncoder<AvifEncodeOptions> {
     speed: options.speed,
     maxOutputBytes: maxOutputBytes,
   );
-
-  @override
-  AvifEncodeOptions createDefaultEncodeOptions() => const AvifEncodeOptions();
 }
 
 /// Options for AVIF encoding.

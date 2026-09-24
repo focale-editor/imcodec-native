@@ -6,16 +6,11 @@ final class NativePngDecoder extends NativeRasterDecoder<PngDecodeOptions> {
   const NativePngDecoder({
     super.maxDecodedBytes,
     super.maxIccProfileBytes,
-  });
+  }) : super(defaultDecodeOptions: const PngDecodeOptions());
 
   @override
   int get codecId => 5;
 
   @override
   ImageFormat get format => ImageFormat.png;
-
-  @override
-  PngDecodeOptions createDecodeOptions({
-    int maxPixels = RasterDecodeOptions.defaultMaxPixels,
-  }) => PngDecodeOptions(maxPixels: maxPixels);
 }

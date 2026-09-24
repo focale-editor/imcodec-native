@@ -11,6 +11,7 @@ abstract base class NativeRasterEncoder<Options extends RasterEncodeOptions> ext
 
   /// Creates an immutable native encoder resource configuration.
   const NativeRasterEncoder({
+    required super.defaultEncodeOptions,
     this.maxOutputBytes = defaultMaxEncodedBytes,
   });
 
@@ -18,7 +19,7 @@ abstract base class NativeRasterEncoder<Options extends RasterEncodeOptions> ext
   NativeRequest createRequest(Image image, Options options);
 
   @override
-  Uint8List encodeImage(Image input, Options options) => _encodeRequest(
+  Uint8List encodeWithOptions(Image input, Options options) => _encodeRequest(
     createRequest(input, options),
   );
 

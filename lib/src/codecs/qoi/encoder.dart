@@ -3,7 +3,7 @@ part of '../qoi.dart';
 /// Encodes QOI through the reference QOI library using Imcodec's options.
 final class NativeQoiEncoder extends NativeRasterEncoder<QoiEncodeOptions> {
   /// Creates a native QOI encoder with a bounded output allocation.
-  const NativeQoiEncoder({super.maxOutputBytes});
+  const NativeQoiEncoder({super.maxOutputBytes}) : super(defaultEncodeOptions: const QoiEncodeOptions());
 
   @override
   NativeRequest createRequest(Image image, QoiEncodeOptions options) => NativeRequest(
@@ -15,7 +15,4 @@ final class NativeQoiEncoder extends NativeRasterEncoder<QoiEncodeOptions> {
     speed: 0,
     maxOutputBytes: maxOutputBytes,
   );
-
-  @override
-  QoiEncodeOptions createDefaultEncodeOptions() => const QoiEncodeOptions();
 }

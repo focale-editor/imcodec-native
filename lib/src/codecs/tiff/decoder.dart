@@ -6,7 +6,7 @@ final class NativeTiffDecoder extends NativeRasterDecoder<TiffDecodeOptions> {
   const NativeTiffDecoder({
     super.maxDecodedBytes,
     super.maxIccProfileBytes,
-  });
+  }) : super(defaultDecodeOptions: const TiffDecodeOptions());
 
   @override
   int get codecId => 8;
@@ -22,9 +22,4 @@ final class NativeTiffDecoder extends NativeRasterDecoder<TiffDecodeOptions> {
               (bytes[0] == 0x4d && bytes[1] == 0x4d && bytes[2] == 0 && bytes[3] == 43 && bytes[4] == 0 && bytes[5] == 8)) &&
           bytes[6] == 0 &&
           bytes[7] == 0;
-
-  @override
-  TiffDecodeOptions createDecodeOptions({
-    int maxPixels = RasterDecodeOptions.defaultMaxPixels,
-  }) => TiffDecodeOptions(maxPixels: maxPixels);
 }

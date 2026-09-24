@@ -113,7 +113,7 @@ packages:
       path: "../../Imcodec"
       relative: true
     source: path
-    version: "0.4.7"
+    version: "0.5.0"
   imcodec_native:
     dependency: "direct main"
     description:

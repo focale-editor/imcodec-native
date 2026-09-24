@@ -6,16 +6,11 @@ final class NativeOpenExrDecoder extends NativeRasterDecoder<OpenExrDecodeOption
   const NativeOpenExrDecoder({
     super.maxDecodedBytes,
     super.maxIccProfileBytes,
-  });
+  }) : super(defaultDecodeOptions: const OpenExrDecodeOptions());
 
   @override
   int get codecId => 9;
 
   @override
   ImageFormat get format => ImageFormat.openExr;
-
-  @override
-  OpenExrDecodeOptions createDecodeOptions({
-    int maxPixels = RasterDecodeOptions.defaultMaxPixels,
-  }) => OpenExrDecodeOptions(maxPixels: maxPixels);
 }

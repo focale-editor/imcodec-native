@@ -6,16 +6,11 @@ final class NativeJpegXlDecoder extends NativeRasterDecoder<JpegXlDecodeOptions>
   const NativeJpegXlDecoder({
     super.maxDecodedBytes,
     super.maxIccProfileBytes,
-  });
+  }) : super(defaultDecodeOptions: const JpegXlDecodeOptions());
 
   @override
   int get codecId => 3;
 
   @override
   ImageFormat get format => ImageFormat.jpegXl;
-
-  @override
-  JpegXlDecodeOptions createDecodeOptions({
-    int maxPixels = RasterDecodeOptions.defaultMaxPixels,
-  }) => JpegXlDecodeOptions(maxPixels: maxPixels);
 }

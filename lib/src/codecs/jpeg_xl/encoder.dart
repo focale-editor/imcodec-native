@@ -3,7 +3,7 @@ part of '../jpeg_xl.dart';
 /// Encodes lossless JPEG XL using libjxl, including RGB hidden by zero alpha.
 final class NativeJpegXlEncoder extends NativeRasterEncoder<JpegXlEncodeOptions> {
   /// Creates a native JPEG XL encoder with a bounded output allocation.
-  const NativeJpegXlEncoder({super.maxOutputBytes});
+  const NativeJpegXlEncoder({super.maxOutputBytes}) : super(defaultEncodeOptions: const JpegXlEncodeOptions());
 
   @override
   NativeRequest createRequest(Image image, JpegXlEncodeOptions options) => NativeRequest(
@@ -20,7 +20,4 @@ final class NativeJpegXlEncoder extends NativeRasterEncoder<JpegXlEncodeOptions>
     },
     maxOutputBytes: maxOutputBytes,
   );
-
-  @override
-  JpegXlEncodeOptions createDefaultEncodeOptions() => const JpegXlEncodeOptions();
 }

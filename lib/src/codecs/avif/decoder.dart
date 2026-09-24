@@ -3,15 +3,10 @@ part of '../avif.dart';
 /// Decodes the primary AVIF image, including alpha and container orientation.
 final class AvifDecoder extends HeifRasterDecoder<AvifDecodeOptions> {
   /// Creates a bounded AVIF decoder.
-  const AvifDecoder();
+  const AvifDecoder() : super(defaultDecodeOptions: const AvifDecodeOptions());
 
   @override
   NativeImageFormat get format => NativeImageFormat.avif;
-
-  @override
-  AvifDecodeOptions createDecodeOptions({
-    int maxPixels = RasterDecodeOptions.defaultMaxPixels,
-  }) => AvifDecodeOptions(maxPixels: maxPixels);
 }
 
 /// Options for AVIF decoding.

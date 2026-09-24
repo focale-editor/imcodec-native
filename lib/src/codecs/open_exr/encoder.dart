@@ -3,7 +3,7 @@ part of '../open_exr.dart';
 /// Encodes OpenEXR through OpenEXR using Imcodec's options.
 final class NativeOpenExrEncoder extends NativeRasterEncoder<OpenExrEncodeOptions> {
   /// Creates a native OpenEXR encoder with a bounded output allocation.
-  const NativeOpenExrEncoder({super.maxOutputBytes});
+  const NativeOpenExrEncoder({super.maxOutputBytes}) : super(defaultEncodeOptions: const OpenExrEncodeOptions());
 
   @override
   NativeRequest createRequest(Image image, OpenExrEncodeOptions options) => NativeRequest(
@@ -15,7 +15,4 @@ final class NativeOpenExrEncoder extends NativeRasterEncoder<OpenExrEncodeOption
     speed: options.compression.value,
     maxOutputBytes: maxOutputBytes,
   );
-
-  @override
-  OpenExrEncodeOptions createDefaultEncodeOptions() => const OpenExrEncodeOptions();
 }

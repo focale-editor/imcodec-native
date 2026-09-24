@@ -6,7 +6,7 @@ part of '../heif.dart';
 /// quality 100, colour subsampling can change RGB values.
 final class HeifEncoder extends NativeRasterEncoder<HeifEncodeOptions> {
   /// Creates a HEIC encoder with a bounded output allocation.
-  const HeifEncoder({super.maxOutputBytes});
+  const HeifEncoder({super.maxOutputBytes}) : super(defaultEncodeOptions: const HeifEncodeOptions());
 
   @override
   NativeRequest createRequest(Image image, HeifEncodeOptions options) => NativeRequest(
@@ -18,9 +18,6 @@ final class HeifEncoder extends NativeRasterEncoder<HeifEncodeOptions> {
     quality: options.quality,
     maxOutputBytes: maxOutputBytes,
   );
-
-  @override
-  HeifEncodeOptions createDefaultEncodeOptions() => const HeifEncodeOptions();
 }
 
 /// Options for HEIF/HEIC encoding.

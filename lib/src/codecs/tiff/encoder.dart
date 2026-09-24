@@ -3,7 +3,7 @@ part of '../tiff.dart';
 /// Encodes TIFF through libtiff using Imcodec's options.
 final class NativeTiffEncoder extends NativeRasterEncoder<TiffEncodeOptions> {
   /// Creates a native TIFF encoder with a bounded output allocation.
-  const NativeTiffEncoder({super.maxOutputBytes});
+  const NativeTiffEncoder({super.maxOutputBytes}) : super(defaultEncodeOptions: const TiffEncodeOptions());
 
   @override
   NativeRequest createRequest(Image image, TiffEncodeOptions options) => NativeRequest(
@@ -15,7 +15,4 @@ final class NativeTiffEncoder extends NativeRasterEncoder<TiffEncodeOptions> {
     speed: options.compression == TiffCompression.packBits ? 1 : 0,
     maxOutputBytes: maxOutputBytes,
   );
-
-  @override
-  TiffEncodeOptions createDefaultEncodeOptions() => const TiffEncodeOptions();
 }

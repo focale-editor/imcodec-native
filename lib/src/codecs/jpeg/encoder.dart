@@ -3,7 +3,7 @@ part of '../jpeg.dart';
 /// Encodes JPEG through libjpeg-turbo using Imcodec's options.
 final class NativeJpegEncoder extends NativeRasterEncoder<JpegEncodeOptions> {
   /// Creates a native JPEG encoder with a bounded output allocation.
-  const NativeJpegEncoder({super.maxOutputBytes});
+  const NativeJpegEncoder({super.maxOutputBytes}) : super(defaultEncodeOptions: const JpegEncodeOptions());
 
   @override
   NativeRequest createRequest(Image image, JpegEncodeOptions options) => NativeRequest(
@@ -16,7 +16,4 @@ final class NativeJpegEncoder extends NativeRasterEncoder<JpegEncodeOptions> {
     speed: options.chroma == JpegChroma.yuv420 ? 1 : 0,
     maxOutputBytes: maxOutputBytes,
   );
-
-  @override
-  JpegEncodeOptions createDefaultEncodeOptions() => const JpegEncodeOptions();
 }

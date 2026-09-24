@@ -3,7 +3,7 @@ part of '../png.dart';
 /// Encodes PNG through libpng using Imcodec's options.
 final class NativePngEncoder extends NativeRasterEncoder<PngEncodeOptions> {
   /// Creates a native PNG encoder with a bounded output allocation.
-  const NativePngEncoder({super.maxOutputBytes});
+  const NativePngEncoder({super.maxOutputBytes}) : super(defaultEncodeOptions: const PngEncodeOptions());
 
   @override
   NativeRequest createRequest(Image image, PngEncodeOptions options) => NativeRequest(
@@ -15,7 +15,4 @@ final class NativePngEncoder extends NativeRasterEncoder<PngEncodeOptions> {
     speed: options.level,
     maxOutputBytes: maxOutputBytes,
   );
-
-  @override
-  PngEncodeOptions createDefaultEncodeOptions() => const PngEncodeOptions();
 }

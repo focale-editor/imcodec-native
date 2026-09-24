@@ -3,7 +3,7 @@ part of '../webp.dart';
 /// Encodes WebP using libwebp while retaining Imcodec's straight-alpha contract.
 final class NativeWebPEncoder extends NativeRasterEncoder<WebPEncodeOptions> {
   /// Creates a native WebP encoder with a bounded output allocation.
-  const NativeWebPEncoder({super.maxOutputBytes});
+  const NativeWebPEncoder({super.maxOutputBytes}) : super(defaultEncodeOptions: const WebPEncodeOptions());
 
   @override
   NativeRequest createRequest(Image image, WebPEncodeOptions options) => NativeRequest(
@@ -21,7 +21,4 @@ final class NativeWebPEncoder extends NativeRasterEncoder<WebPEncodeOptions> {
     },
     maxOutputBytes: maxOutputBytes,
   );
-
-  @override
-  WebPEncodeOptions createDefaultEncodeOptions() => const WebPEncodeOptions();
 }

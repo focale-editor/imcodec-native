@@ -19,13 +19,13 @@ abstract class HeifRasterDecodeOptions extends RasterDecodeOptions {
 /// Shared primary-image decoding for HEIF and AVIF containers.
 abstract base class HeifRasterDecoder<Options extends HeifRasterDecodeOptions> extends RasterDecoder<Options> {
   /// Creates a HEIF-family decoder.
-  const HeifRasterDecoder();
+  const HeifRasterDecoder({required super.defaultDecodeOptions});
 
   /// Container format accepted by this decoder.
   NativeImageFormat get format;
 
   @override
-  Image decodeImage(Uint8List input, Options options) => backend
+  Image decodeWithOptions(Uint8List input, Options options) => backend
       .execute(
         _request(
           input,
@@ -44,7 +44,7 @@ abstract base class HeifRasterDecoder<Options extends HeifRasterDecodeOptions> e
     int? maxDecodedBytes,
     int? maxIccProfileBytes,
   }) {
-    final Options options = decodeOptions ?? createDefaultDecodeOptions();
+    final Options options = decodeOptions ?? defaultDecodeOptions;
     return backend
         .execute(
           _request(
@@ -74,7 +74,7 @@ abstract base class HeifRasterDecoder<Options extends HeifRasterDecodeOptions> e
     Uint8List input, {
     Options? decodeOptions,
   }) async {
-    final Options options = decodeOptions ?? createDefaultDecodeOptions();
+    final Options options = decodeOptions ?? defaultDecodeOptions;
     return (await backend.executeAsync(
       _request(
         Uint8List.fromList(input),
@@ -90,7 +90,7 @@ abstract base class HeifRasterDecoder<Options extends HeifRasterDecodeOptions> e
     int? maxDecodedBytes,
     int? maxIccProfileBytes,
   }) async {
-    final Options options = decodeOptions ?? createDefaultDecodeOptions();
+    final Options options = decodeOptions ?? defaultDecodeOptions;
     return (await backend.executeAsync(
       _request(
         Uint8List.fromList(input),
@@ -142,15 +142,10 @@ abstract base class HeifRasterDecoder<Options extends HeifRasterDecodeOptions> e
 /// Decodes primary HEIF/HEIC images, including grids, alpha and orientation.
 final class HeifDecoder extends HeifRasterDecoder<HeifDecodeOptions> {
   /// Creates a bounded HEIF decoder.
-  const HeifDecoder();
+  const HeifDecoder() : super(defaultDecodeOptions: const HeifDecodeOptions());
 
   @override
   NativeImageFormat get format => NativeImageFormat.heif;
-
-  @override
-  HeifDecodeOptions createDecodeOptions({
-    int maxPixels = RasterDecodeOptions.defaultMaxPixels,
-  }) => HeifDecodeOptions(maxPixels: maxPixels);
 }
 
 /// Options for HEIF/HEIC decoding.

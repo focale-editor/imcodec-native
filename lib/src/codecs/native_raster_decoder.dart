@@ -14,6 +14,7 @@ abstract base class NativeRasterDecoder<Options extends RasterDecodeOptions> ext
 
   /// Creates a native decoder with independent pixel, byte, and ICC limits.
   const NativeRasterDecoder({
+    required super.defaultDecodeOptions,
     this.maxDecodedBytes = defaultMaxDecodedBytes,
     this.maxIccProfileBytes = defaultMaxIccProfileBytes,
   });
@@ -28,7 +29,7 @@ abstract base class NativeRasterDecoder<Options extends RasterDecodeOptions> ext
   bool matches(Uint8List bytes) => format.matches(bytes);
 
   @override
-  Image decodeImage(Uint8List input, Options options) => backend
+  Image decodeWithOptions(Uint8List input, Options options) => backend
       .execute(
         _request(
           input,
@@ -44,7 +45,7 @@ abstract base class NativeRasterDecoder<Options extends RasterDecodeOptions> ext
     int? maxDecodedBytes,
     int? maxIccProfileBytes,
   }) {
-    final Options options = decodeOptions ?? createDefaultDecodeOptions();
+    final Options options = decodeOptions ?? defaultDecodeOptions;
     return backend
         .execute(
           _request(
@@ -86,7 +87,7 @@ abstract base class NativeRasterDecoder<Options extends RasterDecodeOptions> ext
     Uint8List input, {
     Options? decodeOptions,
   }) async {
-    final Options options = decodeOptions ?? createDefaultDecodeOptions();
+    final Options options = decodeOptions ?? defaultDecodeOptions;
     return (await backend.executeAsync(
       _request(
         Uint8List.fromList(input),
@@ -102,7 +103,7 @@ abstract base class NativeRasterDecoder<Options extends RasterDecodeOptions> ext
     int? maxDecodedBytes,
     int? maxIccProfileBytes,
   }) async {
-    final Options options = decodeOptions ?? createDefaultDecodeOptions();
+    final Options options = decodeOptions ?? defaultDecodeOptions;
     return (await backend.executeAsync(
       _request(
         Uint8List.fromList(input),

@@ -6,16 +6,11 @@ final class NativeWebPDecoder extends NativeRasterDecoder<WebPDecodeOptions> {
   const NativeWebPDecoder({
     super.maxDecodedBytes,
     super.maxIccProfileBytes,
-  });
+  }) : super(defaultDecodeOptions: const WebPDecodeOptions());
 
   @override
   int get codecId => 4;
 
   @override
   ImageFormat get format => ImageFormat.webp;
-
-  @override
-  WebPDecodeOptions createDecodeOptions({
-    int maxPixels = RasterDecodeOptions.defaultMaxPixels,
-  }) => WebPDecodeOptions(maxPixels: maxPixels);
 }
