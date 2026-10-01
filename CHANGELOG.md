@@ -1,5 +1,10 @@
 # 📰 ImcodecNative changelog
 
+## v0.2.4
+Released on October 1, 2026.
+
+* **CHORE**: Updated `imcodec`. ([#fc83676](https://github.com/focale-editor/imcodec-native/commit/fc83676))
+
 ## v0.2.3
 Released on October 1, 2026.
 
