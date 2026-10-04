@@ -16,6 +16,21 @@ set(CMAKE_SKIP_INSTALL_RULES ON)
 include(cmake/sources.cmake)
 include(cmake/raster_engines.cmake)
 
+# Git for Windows bundles the Perl required by AOM outside its public PATH.
+# Preserve any explicit Perl selection and otherwise probe that installation.
+if(CMAKE_HOST_WIN32)
+  find_package(Perl QUIET)
+  if(NOT PERL_FOUND)
+    find_package(Git QUIET)
+    if(GIT_FOUND)
+      get_filename_component(git_directory "${GIT_EXECUTABLE}" DIRECTORY)
+      find_program(PERL_EXECUTABLE NAMES perl.exe HINTS
+        "${git_directory}/../usr/bin"
+        "${git_directory}/../../usr/bin")
+    endif()
+  endif()
+endif()
+
 # Portable scalar AV1 avoids NASM and architecture-specific assembler setup.
 # Native builds still run codec work in isolates; Web builds need no pthreads.
 set(AOM_TARGET_CPU generic CACHE STRING "" FORCE)

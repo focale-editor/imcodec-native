@@ -219,15 +219,20 @@ access if this cache has not already been prepared.
 | Android  | CMake 3.25+, Android NDK selected by Flutter; ARMv7, ARM64, x86 and x64 toolchains |
 | iOS      | macOS, Xcode and CMake 3.25+; ARM64 device, ARM64/x64 simulator                    |
 | macOS    | Xcode command-line tools and CMake 3.25+; ARM64/x64                                |
-| Windows  | Visual Studio C++ toolchain and CMake 3.25+; x64/ARM64                             |
+| Windows  | Visual Studio C++ toolchain, CMake 3.25+ and Perl (included in Git for Windows); x64/ARM64 |
 | Linux    | CMake 3.25+, C/C++20 toolchain and Make or Ninja                                   |
 | Web      | Bundled `.mjs`, `.wasm`, loader and worker assets; no native compiler              |
 
 Android uses a statically linked C++ runtime and 16 KB-compatible ELF segment
 alignment. Release libraries are stripped on Android. Native outputs expose
 only the small bridge ABI and bundle all codec engines into one dynamic library.
-`IMCODEC_NATIVE_CMAKE` can select the CMake executable. Cross-compiling Linux
-requires an appropriate compiler toolchain; a host binary is not a substitute.
+`IMCODEC_NATIVE_CMAKE` can select the CMake executable. On Windows, the build
+uses CMake from PATH or discovers the bundled copy in the Visual Studio
+installation selected by Dart's native compiler configuration. Enable Visual
+Studio's **C++ CMake tools for Windows** component if neither copy is available.
+If Perl is absent from PATH, CMake also checks the Git for Windows installation.
+Cross-compiling Linux requires an appropriate compiler toolchain; a host binary
+is not a substitute.
 
 Flutter bundles Web assets automatically. For a custom asset server, pass
 `assetBaseUrl` to `initialize()`. Keep all four files together, serve `.wasm`
