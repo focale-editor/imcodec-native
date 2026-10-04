@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:code_assets/code_assets.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks/hooks.dart';
+import 'package:test/test.dart';
 
 import '../tool/native_builder.dart';
 import '../tool/source_preparer.dart';
@@ -20,6 +20,8 @@ void registerNativeBuilderTests() {
     compiler: Uri.file('$toolPath/clang'),
     linker: Uri.file('$toolPath/ld.lld'),
   );
+  final String cCompilerPath = clang.compiler.toFilePath();
+  final String cppCompilerPath = Uri.file('$toolPath/clang++').toFilePath();
 
   test('pins all codec sources to HTTPS archives and SHA-256 digests', () {
     final List<NativeSourceArchive> sources = readNativeSourceManifest(
@@ -137,8 +139,8 @@ void registerNativeBuilderTests() {
         iOSVersion: 13,
       ),
       containsAll([
-        '-DCMAKE_C_COMPILER=$toolPath/clang',
-        '-DCMAKE_CXX_COMPILER=$toolPath/clang++',
+        '-DCMAKE_C_COMPILER=$cCompilerPath',
+        '-DCMAKE_CXX_COMPILER=$cppCompilerPath',
         '-DCMAKE_OSX_ARCHITECTURES=arm64',
         '-DCMAKE_SYSTEM_NAME=iOS',
         '-DCMAKE_SYSTEM_PROCESSOR=arm64',
@@ -222,8 +224,8 @@ void registerNativeBuilderTests() {
         compiler: clang,
       ),
       [
-        '-DCMAKE_C_COMPILER=$toolPath/clang',
-        '-DCMAKE_CXX_COMPILER=$toolPath/clang++',
+        '-DCMAKE_C_COMPILER=$cCompilerPath',
+        '-DCMAKE_CXX_COMPILER=$cppCompilerPath',
       ],
     );
   });
