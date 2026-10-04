@@ -21,7 +21,7 @@ void main(List<String> arguments) async {
       destination: sourceDirectory,
       log: stdout.writeln,
     );
-    final Directory buildDirectory = Directory.fromUri(input.outputDirectory.resolve('cmake/'));
+    final Directory buildDirectory = nativeBuildDirectory(Directory.fromUri(input.outputDirectory));
     final File library = await buildNativeLibrary(
       packageRoot: packageRoot,
       buildDirectory: buildDirectory,

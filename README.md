@@ -231,6 +231,8 @@ uses CMake from PATH or discovers the bundled copy in the Visual Studio
 installation selected by Dart's native compiler configuration. Enable Visual
 Studio's **C++ CMake tools for Windows** component if neither copy is available.
 If Perl is absent from PATH, CMake also checks the Git for Windows installation.
+Windows CMake intermediates use a target-specific directory under
+`%TEMP%/imcodec-native` to avoid MSBuild's path-length limit in deep checkouts.
 Cross-compiling Linux requires an appropriate compiler toolchain; a host binary
 is not a substitute.
 

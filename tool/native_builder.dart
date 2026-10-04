@@ -1,6 +1,26 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:code_assets/code_assets.dart';
+import 'package:crypto/crypto.dart';
+
+/// Keeps MSBuild intermediates below its legacy Windows path limit.
+///
+/// The native-assets output path identifies the target and compiler settings.
+/// Hashing it preserves separate caches while shortening deeply nested projects.
+Directory nativeBuildDirectory(
+  Directory outputDirectory, {
+  bool? windows,
+  Directory? temporaryDirectory,
+}) {
+  if (!(windows ?? Platform.isWindows)) {
+    return Directory.fromUri(outputDirectory.uri.resolve('cmake/'));
+  }
+  final String identity = outputDirectory.absolute.uri.normalizePath().toString().toLowerCase();
+  final String key = sha256.convert(utf8.encode(identity)).toString().substring(0, 32);
+  final Directory temporary = temporaryDirectory ?? Directory.systemTemp;
+  return Directory('${temporary.path}/imcodec-native/$key');
+}
 
 /// Resolves CMake's target flags from the toolchain selected by Dart or Flutter.
 List<String> nativeTargetArguments(CodeConfig config) {

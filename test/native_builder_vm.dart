@@ -23,6 +23,20 @@ void registerNativeBuilderTests() {
   final String cCompilerPath = clang.compiler.toFilePath();
   final String cppCompilerPath = Uri.file('$toolPath/clang++').toFilePath();
 
+  test('shortens Windows build paths and keeps target caches separate', () {
+    final Directory output = Directory('$toolPath/deep/project/nested/workspace/packages/example/.dart_tool/hooks_runner/shared/imcodec_native/build/first/');
+    final Directory temporary = Directory('$toolPath/tmp');
+    final Directory first = nativeBuildDirectory(output, windows: true, temporaryDirectory: temporary);
+    final Directory repeated = nativeBuildDirectory(output, windows: true, temporaryDirectory: temporary);
+    final Directory other = nativeBuildDirectory(Directory('$toolPath/second/'), windows: true, temporaryDirectory: temporary);
+
+    expect(first.path, repeated.path);
+    expect(first.path, isNot(other.path));
+    expect(first.path.length, lessThan(output.path.length + 6));
+    expect(first.parent.path, Directory('${temporary.path}/imcodec-native').path);
+    expect(nativeBuildDirectory(output, windows: false).uri, output.uri.resolve('cmake/'));
+  });
+
   test('pins all codec sources to HTTPS archives and SHA-256 digests', () {
     final List<NativeSourceArchive> sources = readNativeSourceManifest(
       Directory.current,
