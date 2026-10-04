@@ -69,6 +69,7 @@ List<String> nativeTargetArguments(CodeConfig config) {
     if (os == OS.iOS) {
       arguments.addAll([
         '-DCMAKE_SYSTEM_NAME=iOS',
+        '-DCMAKE_SYSTEM_PROCESSOR=$appleArchitecture',
         '-DCMAKE_OSX_SYSROOT=${config.iOS.targetSdk}',
         '-DCMAKE_OSX_DEPLOYMENT_TARGET=${config.iOS.targetVersion}.0',
         '-DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO',

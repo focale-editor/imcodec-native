@@ -141,6 +141,7 @@ void registerNativeBuilderTests() {
         '-DCMAKE_CXX_COMPILER=$toolPath/clang++',
         '-DCMAKE_OSX_ARCHITECTURES=arm64',
         '-DCMAKE_SYSTEM_NAME=iOS',
+        '-DCMAKE_SYSTEM_PROCESSOR=arm64',
         '-DCMAKE_OSX_SYSROOT=iphoneos',
         '-DCMAKE_OSX_DEPLOYMENT_TARGET=13.0',
       ]),
@@ -155,6 +156,7 @@ void registerNativeBuilderTests() {
       containsAll([
         '-DCMAKE_OSX_ARCHITECTURES=x86_64',
         '-DCMAKE_OSX_SYSROOT=iphonesimulator',
+        '-DCMAKE_SYSTEM_PROCESSOR=x86_64',
       ]),
     );
     expect(
@@ -167,6 +169,7 @@ void registerNativeBuilderTests() {
       containsAll([
         '-DCMAKE_OSX_ARCHITECTURES=arm64',
         '-DCMAKE_OSX_SYSROOT=iphonesimulator',
+        '-DCMAKE_SYSTEM_PROCESSOR=arm64',
       ]),
     );
   });
