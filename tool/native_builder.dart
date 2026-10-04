@@ -74,7 +74,12 @@ List<String> nativeTargetArguments(CodeConfig config) {
         '-DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO',
       ]);
     } else {
-      arguments.add('-DCMAKE_OSX_DEPLOYMENT_TARGET=${config.macOS.targetVersion}.0');
+      // CMake 4 no longer selects a macOS SDK by default. libpng also invokes
+      // the compiler directly while generating its configuration header.
+      arguments.addAll([
+        '-DCMAKE_OSX_SYSROOT=macosx',
+        '-DCMAKE_OSX_DEPLOYMENT_TARGET=${config.macOS.targetVersion}.0',
+      ]);
     }
   } else if (os != OS.linux) {
     throw UnsupportedError('Unsupported native platform: $os');

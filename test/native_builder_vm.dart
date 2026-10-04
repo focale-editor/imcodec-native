@@ -181,6 +181,7 @@ void registerNativeBuilderTests() {
       ),
       containsAll([
         '-DCMAKE_OSX_ARCHITECTURES=x86_64',
+        '-DCMAKE_OSX_SYSROOT=macosx',
         '-DCMAKE_OSX_DEPLOYMENT_TARGET=12.0',
       ]),
     );
@@ -190,7 +191,10 @@ void registerNativeBuilderTests() {
         architecture: Architecture.arm64,
         compiler: clang,
       ),
-      contains('-DCMAKE_OSX_ARCHITECTURES=arm64'),
+      containsAll([
+        '-DCMAKE_OSX_ARCHITECTURES=arm64',
+        '-DCMAKE_OSX_SYSROOT=macosx',
+      ]),
     );
     for (final (Architecture, String) mapping in [
       (Architecture.ia32, 'Win32'),

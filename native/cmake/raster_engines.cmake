@@ -79,9 +79,14 @@ set(LIBDEFLATE_BUILD_SHARED_LIB OFF CACHE BOOL "" FORCE)
 set(LIBDEFLATE_BUILD_GZIP OFF CACHE BOOL "" FORCE)
 set(LIBDEFLATE_INSTALL OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(libdeflate)
-if(ANDROID AND CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" AND
-    CMAKE_C_COMPILER_ID STREQUAL "Clang" AND CMAKE_C_COMPILER_VERSION VERSION_LESS 20)
-  # NDK r28's arm_neon.h passes polynomial vectors to integer intrinsics.
+if((ANDROID AND CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" AND
+    CMAKE_C_COMPILER_ID STREQUAL "Clang" AND CMAKE_C_COMPILER_VERSION VERSION_LESS 20) OR
+    (APPLE AND CMAKE_C_COMPILER_ID STREQUAL "AppleClang" AND
+    (CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$" OR
+     CMAKE_OSX_ARCHITECTURES MATCHES "arm64")))
+  # NDK r28 and Apple Clang's arm_neon.h pass polynomial vectors to integer
+  # intrinsics. Override libdeflate's strict vector conversions for this
+  # target only, retaining its optimized ARM CRC implementation.
   target_compile_options(libdeflate_static PRIVATE -flax-vector-conversions=integer)
 endif()
 set(IMATH_INSTALL OFF CACHE BOOL "" FORCE)
