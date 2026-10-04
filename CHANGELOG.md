@@ -1,5 +1,14 @@
 # 📰 ImcodecNative changelog
 
+## v0.2.5
+Released on October 5, 2026.
+
+* **DOCS**: Updated the plugin logo. ([#3a887fe](https://github.com/focale-editor/imcodec-native/commit/3a887fe))
+* **FIX**: Fixed Windows CMake discovery. ([#b243dc3](https://github.com/focale-editor/imcodec-native/commit/b243dc3))
+* **FIX**: Fixed macOS ARM build flags and sysroot. ([#872a0c7](https://github.com/focale-editor/imcodec-native/commit/872a0c7))
+* **FIX**: Various native builder fixes. ([#171ce8a](https://github.com/focale-editor/imcodec-native/commit/171ce8a))
+* **CHORE**: Shorten Windows native build paths. ([#f3b144f](https://github.com/focale-editor/imcodec-native/commit/f3b144f))
+
 ## v0.2.4
 Released on October 1, 2026.
 
