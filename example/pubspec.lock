@@ -126,11 +126,12 @@ packages:
     source: hosted
     version: "2.2.0"
   imcodec:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: "../../Imcodec"
-      relative: true
-    source: path
+      name: imcodec
+      sha256: bd2fa4afd7b1667695da1b603e11c85c377392edf72beee62716ecd139a6ff1b
+      url: "https://pub.dev"
+    source: hosted
     version: "0.5.4"
   imcodec_native:
     dependency: "direct main"
