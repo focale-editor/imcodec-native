@@ -1,5 +1,10 @@
 # 📰 ImcodecNative changelog
 
+## v0.2.6
+Released on October 21, 2026.
+
+* **FEAT**: Now supporting high-bit-depth encoding and embedded ICC profile. ([#18c47f3](https://github.com/focale-editor/imcodec-native/commit/18c47f3))
+
 ## v0.2.5
 Released on October 5, 2026.
 

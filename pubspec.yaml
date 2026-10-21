@@ -1,6 +1,6 @@
 name: imcodec_native
 description: Bundled native and WebAssembly AVIF, HEIF, JPEG XL, WebP, PNG, JPEG, QOI, TIFF and OpenEXR codecs for Imcodec on all Flutter platforms.
-version: 0.2.5
+version: 0.2.6
 homepage: https://github.com/focale-editor/imcodec-native
 repository: https://github.com/focale-editor/imcodec-native
 
@@ -36,7 +36,7 @@ dependencies:
   flutter:
     sdk: flutter
   hooks: ^2.2.0
-  imcodec: '>=0.5.2 <0.6.0'
+  imcodec: '>=0.5.4 <0.6.0'
   web: ^1.1.1
 
 dev_dependencies:
@@ -44,7 +44,7 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   release: ^0.1.11
-  test: 1.31.1
+  test: ^1.31.1
 
 release:
   changelog:
