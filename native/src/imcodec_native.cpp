@@ -7,6 +7,7 @@
 #include <webp/decode.h>
 #include <webp/demux.h>
 #include <webp/encode.h>
+#include <webp/mux.h>
 
 #include <algorithm>
 #include <cstdio>
@@ -166,7 +167,21 @@ heif_error write_heif(heif_context*, const void* data, size_t size, void* user) 
   return {heif_error_Ok, heif_suberror_Unspecified, "Success"};
 }
 
-void encode_heif(imcodec_result& result, const uint8_t* rgba, int width, int height,
+// Interleaved straight RGBA samples handed to an encoder: eight-bit bytes or
+// sixteen-bit little-endian words, with an optional ICC profile describing them.
+struct Samples {
+  const uint8_t* data;
+  int bit_depth;
+  const uint8_t* icc;
+  size_t icc_size;
+};
+
+// Reads one sixteen-bit little-endian sample.
+uint16_t sample16(const uint8_t* data, size_t index) {
+  return uint16_t(data[index * 2] | (uint16_t(data[index * 2 + 1]) << 8));
+}
+
+void encode_heif(imcodec_result& result, const Samples& samples, int width, int height,
                  int format, int quality, bool lossless, int speed, size_t max_bytes) {
   HeifSession session;
   Context context(heif_context_alloc(), heif_context_free);
@@ -185,25 +200,49 @@ void encode_heif(imcodec_result& result, const uint8_t* rgba, int width, int hei
   } else if (lossless) {
     throw std::runtime_error("The bundled HEIC encoder does not support lossless RGB encoding");
   }
+  // AV1 carries ten-bit samples in its Main and High profiles. The bundled
+  // Kvazaar HEVC build is eight-bit only, so HEIC reduces deeper input.
+  const int plane_depth = samples.bit_depth > 8 && format == 1 ? 10 : 8;
   heif_image* raw_image = nullptr;
-  check(heif_image_create(width, height, heif_colorspace_RGB, heif_chroma_interleaved_RGBA, &raw_image));
+  check(heif_image_create(width, height, heif_colorspace_RGB,
+      plane_depth > 8 ? heif_chroma_interleaved_RRGGBBAA_LE : heif_chroma_interleaved_RGBA, &raw_image));
   Raster image(raw_image, heif_image_release);
-  check(heif_image_add_plane(image.get(), heif_channel_interleaved, width, height, 8));
+  check(heif_image_add_plane(image.get(), heif_channel_interleaved, width, height, plane_depth));
   size_t stride = 0;
   uint8_t* plane = heif_image_get_plane2(image.get(), heif_channel_interleaved, &stride);
-  const size_t row_bytes = static_cast<size_t>(width) * 4;
+  const size_t row_bytes = static_cast<size_t>(width) * 4 * (plane_depth > 8 ? 2 : 1);
   if (!plane || stride < row_bytes) throw std::runtime_error("Invalid HEIF encoder row stride");
   for (int y = 0; y < height; ++y) {
-    std::memcpy(plane + size_t(y) * stride, rgba + size_t(y) * row_bytes, row_bytes);
+    uint8_t* row = plane + size_t(y) * stride;
+    const size_t first = size_t(y) * size_t(width) * 4;
+    if (samples.bit_depth == 8) {
+      std::memcpy(row, samples.data + first, row_bytes);
+      continue;
+    }
+    for (size_t component = 0; component < size_t(width) * 4; ++component) {
+      const uint32_t value = sample16(samples.data, first + component);
+      if (plane_depth > 8) {
+        const uint16_t reduced = uint16_t((value * 1023 + 32767) / 65535);
+        row[component * 2] = uint8_t(reduced);
+        row[component * 2 + 1] = uint8_t(reduced >> 8);
+      } else {
+        row[component] = uint8_t((value * 255 + 32767) / 65535);
+      }
+    }
   }
   Owned<heif_color_profile_nclx, heif_nclx_color_profile_free> profile(
       heif_nclx_color_profile_alloc(), heif_nclx_color_profile_free);
   if (!profile) throw std::bad_alloc();
-  check(heif_nclx_color_profile_set_color_primaries(profile.get(), 1));
-  check(heif_nclx_color_profile_set_transfer_characteristics(profile.get(), 13));
+  // An ICC profile describes the colours; the NCLX box then only declares how
+  // RGB maps to the coded components.
+  check(heif_nclx_color_profile_set_color_primaries(profile.get(), samples.icc ? 2 : 1));
+  check(heif_nclx_color_profile_set_transfer_characteristics(profile.get(), samples.icc ? 2 : 13));
   check(heif_nclx_color_profile_set_matrix_coefficients(profile.get(), lossless ? 0 : 6));
   profile->full_range_flag = 1;
   check(heif_image_set_nclx_color_profile(image.get(), profile.get()));
+  if (samples.icc) {
+    check(heif_image_set_raw_color_profile(image.get(), "prof", samples.icc, samples.icc_size));
+  }
   Owned<heif_encoding_options, heif_encoding_options_free> options(
       heif_encoding_options_alloc(), heif_encoding_options_free);
   if (!options) throw std::bad_alloc();
@@ -246,11 +285,52 @@ void encode_webp(imcodec_result& result, const uint8_t* rgba, int width, int hei
   if (!success) throw std::runtime_error("WebP encoding failed or exceeded its output-byte limit");
 }
 
+// Encodes eight-bit WebP from any sample depth and embeds an ICC profile.
+void encode_webp_samples(imcodec_result& result, const Samples& samples, int width, int height,
+                         int quality, bool lossless, int effort, size_t max_bytes) {
+  std::vector<uint8_t> reduced;
+  const uint8_t* rgba = samples.data;
+  if (samples.bit_depth > 8) {
+    reduced.resize(size_t(width) * size_t(height) * 4);
+    for (size_t index = 0; index < reduced.size(); ++index) {
+      reduced[index] = uint8_t((uint32_t(sample16(samples.data, index)) * 255 + 32767) / 65535);
+    }
+    rgba = reduced.data();
+  }
+  encode_webp(result, rgba, width, height, quality, lossless, effort, max_bytes);
+  if (!samples.icc) return;
+  std::vector<uint8_t>& encoded = result.buffers[0];
+  const WebPData bitstream{encoded.data(), encoded.size()};
+  Owned<WebPMux, WebPMuxDelete> mux(WebPMuxCreate(&bitstream, 1), WebPMuxDelete);
+  if (!mux) throw std::runtime_error("Could not read the encoded WebP container");
+  const WebPData profile{samples.icc, samples.icc_size};
+  if (WebPMuxSetChunk(mux.get(), "ICCP", &profile, 1) != WEBP_MUX_OK) {
+    throw std::runtime_error("Could not embed the WebP ICC profile");
+  }
+  WebPData assembled;
+  WebPDataInit(&assembled);
+  if (WebPMuxAssemble(mux.get(), &assembled) != WEBP_MUX_OK) {
+    WebPDataClear(&assembled);
+    throw std::runtime_error("Could not assemble the profiled WebP container");
+  }
+  if (assembled.size > max_bytes) {
+    WebPDataClear(&assembled);
+    throw std::runtime_error("WebP output exceeds its byte limit");
+  }
+  try {
+    encoded.assign(assembled.bytes, assembled.bytes + assembled.size);
+  } catch (...) {
+    WebPDataClear(&assembled);
+    throw;
+  }
+  WebPDataClear(&assembled);
+}
+
 void check_jxl(JxlEncoderStatus status) {
   if (status != JXL_ENC_SUCCESS) throw std::runtime_error("JPEG XL encoding failed");
 }
 
-void encode_jxl(imcodec_result& result, const uint8_t* rgba, size_t size,
+void encode_jxl(imcodec_result& result, const Samples& samples, size_t size,
                 int width, int height, int effort, size_t max_bytes) {
   Owned<JxlEncoder, JxlEncoderDestroy> encoder(JxlEncoderCreate(nullptr), JxlEncoderDestroy);
   if (!encoder) throw std::bad_alloc();
@@ -258,23 +338,27 @@ void encode_jxl(imcodec_result& result, const uint8_t* rgba, size_t size,
   JxlEncoderInitBasicInfo(&info);
   info.xsize = static_cast<uint32_t>(width);
   info.ysize = static_cast<uint32_t>(height);
-  info.bits_per_sample = 8;
+  info.bits_per_sample = uint32_t(samples.bit_depth);
   info.num_color_channels = 3;
   info.num_extra_channels = 1;
-  info.alpha_bits = 8;
+  info.alpha_bits = uint32_t(samples.bit_depth);
   info.alpha_premultiplied = JXL_FALSE;
   info.uses_original_profile = JXL_TRUE;
   check_jxl(JxlEncoderSetBasicInfo(encoder.get(), &info));
-  JxlColorEncoding color;
-  JxlColorEncodingSetToSRGB(&color, JXL_FALSE);
-  check_jxl(JxlEncoderSetColorEncoding(encoder.get(), &color));
+  if (samples.icc) {
+    check_jxl(JxlEncoderSetICCProfile(encoder.get(), samples.icc, samples.icc_size));
+  } else {
+    JxlColorEncoding color;
+    JxlColorEncodingSetToSRGB(&color, JXL_FALSE);
+    check_jxl(JxlEncoderSetColorEncoding(encoder.get(), &color));
+  }
   JxlEncoderFrameSettings* settings = JxlEncoderFrameSettingsCreate(encoder.get(), nullptr);
   if (!settings) throw std::bad_alloc();
   check_jxl(JxlEncoderSetFrameLossless(settings, JXL_TRUE));
   check_jxl(JxlEncoderFrameSettingsSetOption(settings, JXL_ENC_FRAME_SETTING_EFFORT, effort));
   check_jxl(JxlEncoderFrameSettingsSetOption(settings, JXL_ENC_FRAME_SETTING_KEEP_INVISIBLE, 1));
-  const JxlPixelFormat pixels{4, JXL_TYPE_UINT8, JXL_NATIVE_ENDIAN, 0};
-  check_jxl(JxlEncoderAddImageFrame(settings, &pixels, rgba, size));
+  const JxlPixelFormat pixels{4, samples.bit_depth > 8 ? JXL_TYPE_UINT16 : JXL_TYPE_UINT8, JXL_LITTLE_ENDIAN, 0};
+  check_jxl(JxlEncoderAddImageFrame(settings, &pixels, samples.data, size));
   JxlEncoderCloseInput(encoder.get());
   std::vector<uint8_t>& output = result.buffers[0];
   output.resize(std::min<size_t>(65536, max_bytes));
@@ -671,10 +755,11 @@ imcodec_result* imcodec_encode(const uint8_t* rgba, size_t size, int width, int 
         size != pixel_bytes(size_t(width), size_t(height), 4, std::numeric_limits<size_t>::max(), size)) {
       throw std::runtime_error("Invalid encoder input or allocation limit");
     }
+    const Samples samples{rgba, 8, nullptr, 0};
     if (format == 1 || format == 2) {
-      encode_heif(result, rgba, width, height, format, quality, lossless != 0, speed, max_output_bytes);
+      encode_heif(result, samples, width, height, format, quality, lossless != 0, speed, max_output_bytes);
     } else if (format == 3) {
-      encode_jxl(result, rgba, size, width, height, speed, max_output_bytes);
+      encode_jxl(result, samples, size, width, height, speed, max_output_bytes);
     } else if (format == 4) {
       if (width > WEBP_MAX_DIMENSION || height > WEBP_MAX_DIMENSION) throw std::runtime_error("WebP dimensions exceed 16383 pixels");
       encode_webp(result, rgba, width, height, quality, lossless != 0, speed, max_output_bytes);
@@ -690,6 +775,30 @@ imcodec_result* imcodec_encode(const uint8_t* rgba, size_t size, int width, int 
       imcodec::encode_exr(result, rgba, width, height, speed, max_output_bytes);
     } else {
       throw std::runtime_error("Unsupported encode format");
+    }
+  });
+}
+
+imcodec_result* imcodec_encode_samples(const uint8_t* pixels, size_t size, int width,
+    int height, int bit_depth, const uint8_t* icc, size_t icc_size, int format, int quality,
+    int lossless, int speed, size_t max_output_bytes) {
+  return operation(format, [&](imcodec_result& result) {
+    const size_t channel_bytes = bit_depth == 16 ? 2 : 1;
+    if (!pixels || width <= 0 || height <= 0 || !max_output_bytes || quality < 0 || quality > 100 ||
+        (bit_depth != 8 && bit_depth != 16) || (icc_size && !icc) ||
+        size != pixel_bytes(size_t(width), size_t(height), 4 * channel_bytes, std::numeric_limits<size_t>::max(), size)) {
+      throw std::runtime_error("Invalid encoder samples or allocation limit");
+    }
+    const Samples samples{pixels, bit_depth, icc_size ? icc : nullptr, icc_size};
+    if (format == 1 || format == 2) {
+      encode_heif(result, samples, width, height, format, quality, lossless != 0, speed, max_output_bytes);
+    } else if (format == 3) {
+      encode_jxl(result, samples, size, width, height, speed, max_output_bytes);
+    } else if (format == 4) {
+      if (width > WEBP_MAX_DIMENSION || height > WEBP_MAX_DIMENSION) throw std::runtime_error("WebP dimensions exceed 16383 pixels");
+      encode_webp_samples(result, samples, width, height, quality, lossless != 0, speed, max_output_bytes);
+    } else {
+      throw std::runtime_error("This format does not encode high-depth or profiled samples natively");
     }
   });
 }

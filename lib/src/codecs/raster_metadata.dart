@@ -205,15 +205,20 @@ Uint8List jpegWithPixelDensity(Uint8List jpeg, double pixelsPerInch) {
   return output;
 }
 
-/// Returns [tiff] with resolution tags recording [pixelsPerInch].
+/// Adds requested TIFF resolution and ICC tags within [maxOutputBytes].
 ///
-/// The first directory is copied to the end of the file with XResolution,
-/// YResolution and ResolutionUnit set, and the header is pointed at the copy.
+/// The first directory is copied to the end of the file with requested tags
+/// replaced, and the header is pointed at the copy.
 /// Every other offset stays valid because no existing byte moves.
-Uint8List tiffWithPixelDensity(Uint8List tiff, double pixelsPerInch) {
-  _checkDensity(pixelsPerInch);
+Uint8List tiffWithMetadata(Uint8List tiff, {double? pixelsPerInch, Uint8List? iccProfile, required int maxOutputBytes}) {
+  if (pixelsPerInch == null && iccProfile == null) {
+    return tiff;
+  }
+  if (pixelsPerInch != null) {
+    _checkDensity(pixelsPerInch);
+  }
   const int denominator = 1000;
-  final int numerator = (pixelsPerInch * denominator).round();
+  final int numerator = ((pixelsPerInch ?? 0) * denominator).round();
   if (numerator > 0xFFFFFFFF) {
     throw ArgumentError.value(pixelsPerInch, 'pixelsPerInch', 'TIFF density exceeds a rational');
   }
@@ -237,7 +242,10 @@ Uint8List tiffWithPixelDensity(Uint8List tiff, double pixelsPerInch) {
   if (directory + 2 + count * 12 + 4 > tiff.length) {
     throw const ImageCodecException('Truncated TIFF directory');
   }
-  const Set<int> replaced = {282, 283, 296};
+  final Set<int> replaced = {
+    if (pixelsPerInch != null) ...[282, 283, 296],
+    if (iccProfile != null) 34675,
+  };
   final Map<int, Uint8List> entries = {
     for (int index = 0; index < count; index++)
       if (!replaced.contains(source.getUint16(directory + 2 + index * 12, endian)))
@@ -246,14 +254,21 @@ Uint8List tiffWithPixelDensity(Uint8List tiff, double pixelsPerInch) {
   final int nextDirectory = source.getUint32(directory + 2 + count * 12, endian);
   // Word-aligned, as TIFF requires of directories and of the values they point to.
   final int newDirectory = tiff.length + tiff.length % 2;
-  final int directorySize = 2 + (entries.length + 3) * 12 + 4;
+  final int directorySize = 2 + (entries.length + replaced.length) * 12 + 4;
   final int rationals = newDirectory + directorySize;
-  Uint8List entry(int tag, int type, int value) {
+  final int profileOffset = rationals + (pixelsPerInch == null ? 0 : 16);
+  final int outputLength = profileOffset + (iccProfile?.length ?? 0);
+  if (outputLength > maxOutputBytes || outputLength > 0xffffffff) {
+    throw const ImageCodecException('TIFF metadata exceeds its output-byte limit');
+  }
+
+  /// Frames one directory entry, leaving small non-scalar payloads to its caller.
+  Uint8List entry(int tag, int type, int value, {int count = 1}) {
     final Uint8List bytes = Uint8List(12);
     ByteData.sublistView(bytes)
       ..setUint16(0, tag, endian)
       ..setUint16(2, type, endian)
-      ..setUint32(4, 1, endian);
+      ..setUint32(4, count, endian);
     if (type == 3) {
       ByteData.sublistView(bytes).setUint16(8, value, endian);
     } else {
@@ -262,10 +277,22 @@ Uint8List tiffWithPixelDensity(Uint8List tiff, double pixelsPerInch) {
     return bytes;
   }
 
-  entries[282] = entry(282, 5, rationals);
-  entries[283] = entry(283, 5, rationals + 8);
-  entries[296] = entry(296, 3, 2);
-  final Uint8List output = Uint8List(rationals + 16)..setRange(0, tiff.length, tiff);
+  if (pixelsPerInch != null) {
+    entries[282] = entry(282, 5, rationals);
+    entries[283] = entry(283, 5, rationals + 8);
+    entries[296] = entry(296, 3, 2);
+  }
+  if (iccProfile != null) {
+    final Uint8List profileEntry = entry(34675, 7, iccProfile.length <= 4 ? 0 : profileOffset, count: iccProfile.length);
+    if (iccProfile.length <= 4) {
+      profileEntry.setRange(8, 8 + iccProfile.length, iccProfile);
+    }
+    entries[34675] = profileEntry;
+  }
+  final Uint8List output = Uint8List(outputLength)..setRange(0, tiff.length, tiff);
+  if (iccProfile != null && iccProfile.length > 4) {
+    output.setRange(profileOffset, outputLength, iccProfile);
+  }
   final ByteData data = ByteData.sublistView(output)
     ..setUint32(4, newDirectory, endian)
     ..setUint16(newDirectory, entries.length, endian);
@@ -274,7 +301,7 @@ Uint8List tiffWithPixelDensity(Uint8List tiff, double pixelsPerInch) {
     output.setRange(newDirectory + 2 + index * 12, newDirectory + 14 + index * 12, entries[tags[index]]!);
   }
   data.setUint32(newDirectory + 2 + tags.length * 12, nextDirectory, endian);
-  for (int index = 0; index < 2; index++) {
+  for (int index = 0; pixelsPerInch != null && index < 2; index++) {
     data
       ..setUint32(rationals + index * 8, numerator, endian)
       ..setUint32(rationals + index * 8 + 4, denominator, endian);

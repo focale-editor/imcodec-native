@@ -29,6 +29,14 @@ IMCODEC_EXPORT imcodec_result* imcodec_inspect(const uint8_t* bytes, size_t size
 IMCODEC_EXPORT imcodec_result* imcodec_encode(const uint8_t* rgba, size_t size,
     int width, int height, int format, int quality, int lossless, int speed,
     size_t max_output_bytes);
+/* Encodes AVIF, HEIF/HEIC, JPEG XL or WebP from straight RGBA samples of
+ * bit_depth 8 (bytes) or 16 (little-endian words), embedding the optional ICC
+ * profile. AVIF keeps ten bits and JPEG XL sixteen; the eight-bit HEVC
+ * encoder and WebP reduce deeper samples. */
+IMCODEC_EXPORT imcodec_result* imcodec_encode_samples(const uint8_t* pixels,
+    size_t size, int width, int height, int bit_depth, const uint8_t* icc,
+    size_t icc_size, int format, int quality, int lossless, int speed,
+    size_t max_output_bytes);
 IMCODEC_EXPORT void imcodec_result_free(imcodec_result* result);
 /* Numbers: width, height, sample depth, source depth, data size, ICC size,
  * EXIF size, XMP size (fields 0 through 7), and colour model (field 8:

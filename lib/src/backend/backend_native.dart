@@ -23,9 +23,14 @@ Future<NativeResult> executeAsync(NativeRequest request) => Isolate.run(() => ex
 NativeResult execute(NativeRequest request) {
   request.validate();
   final Pointer<Uint8> input = calloc<Uint8>(request.bytes.isEmpty ? 1 : request.bytes.length);
+  final Uint8List? iccProfile = request.iccProfile;
+  final Pointer<Uint8> icc = iccProfile == null || iccProfile.isEmpty ? nullptr : calloc<Uint8>(iccProfile.length);
   Pointer<NativeCodecResult> result = nullptr;
   try {
     input.asTypedList(request.bytes.length).setAll(0, request.bytes);
+    if (icc != nullptr) {
+      icc.asTypedList(iccProfile!.length).setAll(0, iccProfile);
+    }
     result = switch (request.operation) {
       NativeOperation.decode => nativeDecode(input, request.bytes.length, request.format, request.maxPixels, request.maxDecodedBytes, request.preserveDepth ? 1 : 0, request.maxIccProfileBytes),
       NativeOperation.inspect => nativeInspect(input, request.bytes.length, request.format, request.maxIccProfileBytes, request.maxMetadataBytes),
@@ -34,6 +39,20 @@ NativeResult execute(NativeRequest request) {
         request.bytes.length,
         request.width,
         request.height,
+        request.format,
+        request.quality,
+        request.lossless ? 1 : 0,
+        request.speed,
+        request.maxOutputBytes,
+      ),
+      NativeOperation.encodeSamples => nativeEncodeSamples(
+        input,
+        request.bytes.length,
+        request.width,
+        request.height,
+        request.bitDepth,
+        icc,
+        icc == nullptr ? 0 : iccProfile!.length,
         request.format,
         request.quality,
         request.lossless ? 1 : 0,
@@ -59,6 +78,9 @@ NativeResult execute(NativeRequest request) {
   } finally {
     nativeResultFree(result);
     calloc.free(input);
+    if (icc != nullptr) {
+      calloc.free(icc);
+    }
   }
 }
 

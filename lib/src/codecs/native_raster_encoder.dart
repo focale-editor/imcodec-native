@@ -18,6 +18,31 @@ abstract base class NativeRasterEncoder<Options extends RasterEncodeOptions> ext
   /// Describes one encoding operation without retaining native pointers.
   NativeRequest createRequest(Image image, Options options);
 
+  /// Describes encoding [image]'s samples, or `null` for an RGBA8-only codec.
+  ///
+  /// Codecs that keep deeper samples or embed an ICC profile override this.
+  NativeRequest? createSampleRequest(DecodedImage image, Options options) => null;
+
+  /// Encodes straight RGB [image] samples at their own depth and embeds their
+  /// ICC profile.
+  ///
+  /// Sixteen-bit samples keep as many bits as the format stores. Throws
+  /// [UnsupportedError] for a codec that only encodes RGBA8.
+  Uint8List encodeSamples(DecodedImage image, {Options? encodeOptions}) {
+    final Options options = encodeOptions ?? defaultEncodeOptions;
+    return finishEncoding(_encodeRequest(_sampleRequest(image, options)), options);
+  }
+
+  /// Encodes [image] samples like [encodeSamples], through [runner].
+  Future<Uint8List> encodeSamplesWith(ParallelRunner runner, DecodedImage image, {Options? encodeOptions}) async {
+    final Options options = encodeOptions ?? defaultEncodeOptions;
+    final List<Uint8List> results = await runner<NativeRequest, Uint8List>([_sampleRequest(image, options)], _encodeRequest);
+    return finishEncoding(results.single, options);
+  }
+
+  /// Resolves [createSampleRequest], rejecting codecs without sample support.
+  NativeRequest _sampleRequest(DecodedImage image, Options options) => createSampleRequest(image, options) ?? (throw UnsupportedError('$runtimeType encodes RGBA8 only'));
+
   /// Adds what the engine cannot write to its [encoded] output.
   ///
   /// Returns [encoded] by default. Runs on the calling isolate after the engine,

@@ -185,9 +185,11 @@ endforeach()
 
 foreach(option WEBP_BUILD_ANIM_UTILS WEBP_BUILD_CWEBP WEBP_BUILD_DWEBP
     WEBP_BUILD_GIF2WEBP WEBP_BUILD_IMG2WEBP WEBP_BUILD_VWEBP WEBP_BUILD_WEBPINFO
-    WEBP_BUILD_WEBPMUX WEBP_BUILD_EXTRAS WEBP_BUILD_LIBWEBPMUX WEBP_USE_THREAD)
+    WEBP_BUILD_WEBPMUX WEBP_BUILD_EXTRAS WEBP_USE_THREAD)
   set(${option} OFF CACHE BOOL "" FORCE)
 endforeach()
+# The mux library embeds ICC profiles in encoded WebP containers.
+set(WEBP_BUILD_LIBWEBPMUX ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(libwebp)
 
 foreach(option TOOLS DEVTOOLS DOXYGEN MANPAGES BENCHMARK EXAMPLES JNI SJPEG
@@ -211,7 +213,7 @@ if(EMSCRIPTEN)
     -sFILESYSTEM=0 -sALLOW_MEMORY_GROWTH=1 -sABORTING_MALLOC=0 -sINITIAL_MEMORY=33554432
     -sMAXIMUM_MEMORY=2147483648 -sSTACK_SIZE=5242880 -sALLOW_TABLE_GROWTH=1
     -sEXPORTED_RUNTIME_METHODS=UTF8ToString,HEAPU8
-    -sEXPORTED_FUNCTIONS=_malloc,_free,_imcodec_decode,_imcodec_encode,_imcodec_inspect,_imcodec_result_free,_imcodec_result_number,_imcodec_result_data,_imcodec_result_error,_imcodec_version)
+    -sEXPORTED_FUNCTIONS=_malloc,_free,_imcodec_decode,_imcodec_encode,_imcodec_encode_samples,_imcodec_inspect,_imcodec_result_free,_imcodec_result_number,_imcodec_result_data,_imcodec_result_error,_imcodec_version)
 else()
   add_library(imcodec_native SHARED src/imcodec_native.cpp src/png.cpp src/jpeg.cpp src/qoi.cpp src/tiff.cpp src/open_exr.cpp)
   if(ANDROID)
@@ -228,7 +230,7 @@ else()
   endif()
 endif()
 target_include_directories(imcodec_native PRIVATE include "${qoi_SOURCE_DIR}" "${libheif_SOURCE_DIR}/libheif/api" "${libheif_BINARY_DIR}")
-target_link_libraries(imcodec_native PRIVATE heif jxl webp webpdemux png_static imcodec_jpeg tiff OpenEXR::OpenEXR)
+target_link_libraries(imcodec_native PRIVATE heif jxl webp webpdemux libwebpmux png_static imcodec_jpeg tiff OpenEXR::OpenEXR)
 set_target_properties(imcodec_native PROPERTIES
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/out"
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/out"

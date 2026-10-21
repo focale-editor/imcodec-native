@@ -8,6 +8,7 @@ const loadModule = () => modulePromise ??= import('./imcodec_native.mjs')
 self.onmessage = async ({data: request}) => {
   let module;
   let input = 0;
+  let icc = 0;
   let result = 0;
   try {
     module = await loadModule();
@@ -26,6 +27,17 @@ self.onmessage = async ({data: request}) => {
       result = module._imcodec_encode(input, bytes.length, request.width,
         request.height, request.format, request.quality, request.lossless ? 1 : 0,
         request.speed, request.maxOutputBytes);
+    } else if (request.operation === 3) {
+      const profile = request.iccProfile ? new Uint8Array(request.iccProfile) : null;
+      if (profile && profile.length) {
+        icc = module._malloc(profile.length);
+        if (!icc) throw new Error('Could not allocate WebAssembly ICC memory');
+        module.HEAPU8.set(profile, icc);
+      }
+      result = module._imcodec_encode_samples(input, bytes.length, request.width,
+        request.height, request.bitDepth, icc, icc ? profile.length : 0,
+        request.format, request.quality, request.lossless ? 1 : 0, request.speed,
+        request.maxOutputBytes);
     } else {
       throw new Error('Unsupported codec operation');
     }
@@ -56,6 +68,7 @@ self.onmessage = async ({data: request}) => {
     if (module) {
       module._imcodec_result_free(result);
       module._free(input);
+      if (icc) module._free(icc);
     }
   }
 };

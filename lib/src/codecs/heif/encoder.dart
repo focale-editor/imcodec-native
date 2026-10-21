@@ -9,12 +9,18 @@ final class HeifEncoder extends NativeRasterEncoder<HeifEncodeOptions> {
   const HeifEncoder({super.maxOutputBytes}) : super(defaultEncodeOptions: const HeifEncodeOptions());
 
   @override
-  NativeRequest createRequest(Image image, HeifEncodeOptions options) => NativeRequest(
+  NativeRequest createRequest(Image image, HeifEncodeOptions options) => _request(image.bytes, image.width, image.height, options);
+
+  @override
+  NativeRequest createSampleRequest(DecodedImage image, HeifEncodeOptions options) => _request(Uint8List(0), image.width, image.height, options).withSamples(image);
+
+  /// Describes one RGBA8 encode of [bytes] with [options].
+  NativeRequest _request(Uint8List bytes, int width, int height, HeifEncodeOptions options) => NativeRequest(
     operation: NativeOperation.encode,
     format: 2,
-    bytes: image.bytes,
-    width: image.width,
-    height: image.height,
+    bytes: bytes,
+    width: width,
+    height: height,
     quality: options.quality,
     maxOutputBytes: maxOutputBytes,
   );

@@ -6,12 +6,18 @@ final class AvifEncoder extends NativeRasterEncoder<AvifEncodeOptions> {
   const AvifEncoder({super.maxOutputBytes}) : super(defaultEncodeOptions: const AvifEncodeOptions());
 
   @override
-  NativeRequest createRequest(Image image, AvifEncodeOptions options) => NativeRequest(
+  NativeRequest createRequest(Image image, AvifEncodeOptions options) => _request(image.bytes, image.width, image.height, options);
+
+  @override
+  NativeRequest createSampleRequest(DecodedImage image, AvifEncodeOptions options) => _request(Uint8List(0), image.width, image.height, options).withSamples(image);
+
+  /// Describes one RGBA8 encode of [bytes] with [options].
+  NativeRequest _request(Uint8List bytes, int width, int height, AvifEncodeOptions options) => NativeRequest(
     operation: NativeOperation.encode,
     format: 1,
-    bytes: image.bytes,
-    width: image.width,
-    height: image.height,
+    bytes: bytes,
+    width: width,
+    height: height,
     quality: options.quality,
     lossless: options.lossless,
     speed: options.speed,

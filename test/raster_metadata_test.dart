@@ -40,6 +40,36 @@ void main() {
     expect(inspectImage(png)?.pixelsPerInch, isNull);
   });
 
+  for (final double? density in [null, 300.0]) {
+    for (final TiffCompression compression in TiffCompression.values) {
+      test('TIFF retains ICC and pixels with density=$density and ${compression.name}', () {
+        final Image image = source();
+        final Uint8List profile = Uint8List.fromList(List.generate(513, (index) => index % 256));
+
+        final Uint8List encoded = const NativeTiffEncoder().encode(
+          image,
+          encodeOptions: TiffEncodeOptions(compression: compression, pixelsPerInch: density, iccProfile: profile),
+        );
+
+        expect(const NativeTiffDecoder().decode(encoded).bytes, image.bytes);
+        final DecodedImageMetadata metadata = inspectImage(encoded)!;
+        expect(metadata.iccProfile, profile);
+        expect(metadata.pixelsPerInch, density);
+      });
+    }
+  }
+
+  test('TIFF enforces its output limit after adding ICC data', () {
+    final Image image = source();
+    final int untaggedSize = const NativeTiffEncoder().encode(image).length;
+    final Uint8List profile = Uint8List(1024);
+
+    expect(
+      () => NativeTiffEncoder(maxOutputBytes: untaggedSize + 512).encode(image, encodeOptions: TiffEncodeOptions(iccProfile: profile)),
+      throwsA(isA<ImageCodecException>()),
+    );
+  });
+
   test('native JPEG decoding applies the EXIF orientation like the Dart decoder', () {
     final Uint8List jpeg = const NativeJpegEncoder().encode(source(), encodeOptions: const JpegEncodeOptions(quality: 100));
     for (int orientation = 1; orientation <= 8; orientation++) {

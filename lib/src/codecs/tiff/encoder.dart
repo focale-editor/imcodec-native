@@ -16,10 +16,8 @@ final class NativeTiffEncoder extends NativeRasterEncoder<TiffEncodeOptions> {
     maxOutputBytes: maxOutputBytes,
   );
 
-  /// The engine writes no density, so [TiffEncodeOptions.pixelsPerInch] is added here.
+  /// Adds requested density and ICC data without changing encoded pixel strips.
   @override
-  Uint8List finishEncoding(Uint8List encoded, TiffEncodeOptions options) {
-    final double? pixelsPerInch = options.pixelsPerInch;
-    return pixelsPerInch == null ? encoded : tiffWithPixelDensity(encoded, pixelsPerInch);
-  }
+  Uint8List finishEncoding(Uint8List encoded, TiffEncodeOptions options) =>
+      tiffWithMetadata(encoded, pixelsPerInch: options.pixelsPerInch, iccProfile: options.iccProfile, maxOutputBytes: maxOutputBytes);
 }

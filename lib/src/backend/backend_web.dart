@@ -146,6 +146,8 @@ final class _WorkerRuntime {
     _pending[id] = completed;
     try {
       final JSArrayBuffer buffer = Uint8List.fromList(request.bytes).buffer.toJS;
+      final Uint8List? iccProfile = request.iccProfile;
+      final JSArrayBuffer? icc = iccProfile == null ? null : Uint8List.fromList(iccProfile).buffer.toJS;
       _worker.postMessage(
         _WorkerRequest(
           id: id,
@@ -163,8 +165,10 @@ final class _WorkerRuntime {
           maxIccProfileBytes: request.maxIccProfileBytes,
           maxMetadataBytes: request.maxMetadataBytes,
           maxOutputBytes: request.maxOutputBytes,
+          bitDepth: request.bitDepth,
+          iccProfile: icc,
         ),
-        [buffer].toJS,
+        [buffer, ?icc].toJS,
       );
     } on Object catch (error, stack) {
       _pending.remove(id);
@@ -245,9 +249,17 @@ NativeResult execute(NativeRequest request) {
   if (input == 0) {
     throw const ImageCodecException('Could not allocate WebAssembly input memory');
   }
+  final Uint8List? iccProfile = request.iccProfile;
+  final int icc = iccProfile == null || iccProfile.isEmpty ? 0 : module.allocate(iccProfile.length);
   int result = 0;
   try {
+    if (iccProfile != null && iccProfile.isNotEmpty && icc == 0) {
+      throw const ImageCodecException('Could not allocate WebAssembly ICC memory');
+    }
     module.heap.toDart.setRange(input, input + request.bytes.length, request.bytes);
+    if (icc != 0) {
+      module.heap.toDart.setRange(icc, icc + iccProfile!.length, iccProfile);
+    }
     result = switch (request.operation) {
       NativeOperation.decode => module.decode(input, request.bytes.length, request.format, request.maxPixels, request.maxDecodedBytes, request.preserveDepth ? 1 : 0, request.maxIccProfileBytes),
       NativeOperation.inspect => module.inspect(input, request.bytes.length, request.format, request.maxIccProfileBytes, request.maxMetadataBytes),
@@ -256,6 +268,20 @@ NativeResult execute(NativeRequest request) {
         request.bytes.length,
         request.width,
         request.height,
+        request.format,
+        request.quality,
+        request.lossless ? 1 : 0,
+        request.speed,
+        request.maxOutputBytes,
+      ),
+      NativeOperation.encodeSamples => module.encodeSamples(
+        input,
+        request.bytes.length,
+        request.width,
+        request.height,
+        request.bitDepth,
+        icc,
+        icc == 0 ? 0 : iccProfile!.length,
         request.format,
         request.quality,
         request.lossless ? 1 : 0,
@@ -281,6 +307,9 @@ NativeResult execute(NativeRequest request) {
   } finally {
     module.releaseResult(result);
     module.release(input);
+    if (icc != 0) {
+      module.release(icc);
+    }
   }
 }
 
@@ -319,6 +348,10 @@ extension type _CodecModule._(JSObject _) implements JSObject {
   /// Encodes straight RGBA8.
   @JS('_imcodec_encode')
   external int encode(int bytes, int size, int width, int height, int format, int quality, int lossless, int speed, int maxBytes);
+
+  /// Encodes straight RGBA samples with an optional ICC profile.
+  @JS('_imcodec_encode_samples')
+  external int encodeSamples(int pixels, int size, int width, int height, int bitDepth, int icc, int iccSize, int format, int quality, int lossless, int speed, int maxBytes);
 
   /// Releases all allocations owned by one result.
   @JS('_imcodec_result_free')
@@ -364,6 +397,8 @@ extension type _WorkerRequest._(JSObject _) implements JSObject {
     required int maxIccProfileBytes,
     required int maxMetadataBytes,
     required int maxOutputBytes,
+    required int bitDepth,
+    required JSArrayBuffer? iccProfile,
   });
 }
 

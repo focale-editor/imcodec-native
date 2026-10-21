@@ -20,6 +20,23 @@ external Pointer<NativeCodecResult> nativeInspect(Pointer<Uint8> bytes, int size
 @Native<Pointer<NativeCodecResult> Function(Pointer<Uint8>, Size, Int, Int, Int, Int, Int, Int, Size)>(symbol: 'imcodec_encode')
 external Pointer<NativeCodecResult> nativeEncode(Pointer<Uint8> bytes, int size, int width, int height, int format, int quality, int lossless, int speed, int maxOutputBytes);
 
+/// Encodes straight RGBA samples of eight or sixteen bits with an ICC profile.
+@Native<Pointer<NativeCodecResult> Function(Pointer<Uint8>, Size, Int, Int, Int, Pointer<Uint8>, Size, Int, Int, Int, Int, Size)>(symbol: 'imcodec_encode_samples')
+external Pointer<NativeCodecResult> nativeEncodeSamples(
+  Pointer<Uint8> pixels,
+  int size,
+  int width,
+  int height,
+  int bitDepth,
+  Pointer<Uint8> icc,
+  int iccSize,
+  int format,
+  int quality,
+  int lossless,
+  int speed,
+  int maxOutputBytes,
+);
+
 /// Releases every allocation owned by one bridge result.
 @Native<Void Function(Pointer<NativeCodecResult>)>(symbol: 'imcodec_result_free')
 external void nativeResultFree(Pointer<NativeCodecResult> result);
