@@ -123,14 +123,21 @@ void read_jpeg(imcodec_result& result, const uint8_t* bytes, size_t size,
   result.height = state->codec.image_height;
   result.source_depth = state->codec.data_precision;
   result.depth = limits.preserve && result.source_depth > 8 ? 16 : 8;
-  if (inspect) return;
-  result.buffers[0].resize(pixel_bytes(result.width, result.height, result.depth / 2, limits.pixels, limits.bytes));
   const bool cmyk = state->codec.jpeg_color_space == JCS_CMYK || state->codec.jpeg_color_space == JCS_YCCK;
-  state->codec.out_color_space = cmyk ? JCS_CMYK : JCS_EXT_RGBA;
+  result.color_model = cmyk ? 1 : 0;
+  if (inspect) return;
   if (cmyk && result.source_depth != 8) throw std::runtime_error("High-depth CMYK JPEG is unsupported");
-  // CMYK conversion produces RGB samples; its original four-channel profile
-  // cannot describe those pixels. Inspection still retains the source profile.
-  if (cmyk) result.buffers[1].clear();
+  // Exact decoding keeps CMYK+A process samples and their profile. The RGBA8
+  // compatibility path converts them, so the four-channel profile no longer
+  // describes its pixels.
+  const bool exact_cmyk = cmyk && limits.preserve;
+  const size_t output_channels = exact_cmyk ? 5 : 4;
+  result.buffers[0].resize(pixel_bytes(result.width, result.height, output_channels * (result.depth / 8), limits.pixels, limits.bytes));
+  state->codec.out_color_space = cmyk ? JCS_CMYK : JCS_EXT_RGBA;
+  if (cmyk && !exact_cmyk) {
+    result.color_model = 0;
+    result.buffers[1].clear();
+  }
   jpeg_start_decompress(&state->codec);
   const size_t samples = result.width * 4;
   if (result.source_depth <= 8) state->row.resize(samples);
@@ -147,6 +154,18 @@ void read_jpeg(imcodec_result& result, const uint8_t* bytes, size_t size,
     } else {
       J16SAMPROW row = state->row16.data();
       if (jpeg16_read_scanlines(&state->codec, &row, 1) != 1) throw std::runtime_error("Incomplete JPEG scanline");
+    }
+    if (exact_cmyk) {
+      // Adobe CMYK JPEGs store inverted samples; output ink amounts like TIFF.
+      uint8_t* target = result.buffers[0].data() + y * result.width * 5;
+      for (size_t x = 0; x < result.width; ++x) {
+        for (size_t c = 0; c < 4; ++c) {
+          const uint8_t value = state->row[x * 4 + c];
+          target[x * 5 + c] = state->codec.saw_Adobe_marker ? 255 - value : value;
+        }
+        target[x * 5 + 4] = 255;
+      }
+      continue;
     }
     uint8_t* target = result.buffers[0].data() + y * samples * (result.depth / 8);
     if (result.source_depth <= 8) {

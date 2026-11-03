@@ -59,6 +59,13 @@ void main() {
     expect(cmyk.bytes, [
       for (int i = 0; i < 4; i++) ...[255, 0, 0, 255],
     ]);
+    final DecodedImage exactCmyk = const NativeJpegDecoder().decodeData(rasterFixture('cmykJpeg'));
+    expect(exactCmyk.colorModel, DecodedColorModel.cmyk);
+    expect(exactCmyk.bytes, [
+      for (int i = 0; i < 4; i++) ...[0, 255, 255, 0, 255],
+    ]);
+    expect(decodeImageData(rasterFixture('cmykJpeg')).colorModel, DecodedColorModel.cmyk);
+    expect(const NativeJpegDecoder().inspect(rasterFixture('cmykJpeg')).colorModel, DecodedColorModel.cmyk);
     expect(() => const NativeJpegDecoder(maxIccProfileBytes: 8).decode(progressive), throwsA(isA<ImageCodecException>()));
   });
 
