@@ -1,5 +1,10 @@
 # 📰 ImcodecNative changelog
 
+## v0.2.7
+Released on November 3, 2026.
+
+* **FIX**: Now preserving CMYK samples and ICC profiles when decoding JPEG data. ([#32206c5](https://github.com/focale-editor/imcodec-native/commit/32206c5))
+
 ## v0.2.6
 Released on October 21, 2026.
 
