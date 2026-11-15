@@ -145,7 +145,7 @@ are serialized inside the background Worker.
 | PNG       | libpng; palette/gray/RGB/RGBA, transparency, Adam7 and 8/16-bit samples                                                   | libpng; lossless RGBA8, `PngEncodeOptions.level` 0–9                          |
 | JPEG      | libjpeg-turbo; baseline/progressive, grayscale/RGB and 8-bit CMYK; low-depth and 12/16-bit lossless samples               | libjpeg-turbo; baseline RGB, quality and 4:4:4/4:2:0 options; alpha discarded |
 | QOI       | Reference QOI library; RGB/RGBA with strict stream validation                                                             | Reference QOI library; lossless RGBA8, including hidden RGB                   |
-| TIFF      | libtiff; first directory, strips/tiles, separate/interleaved planes, all orientations, RGB/gray/CMYK uint8/uint16/float32 | libtiff; straight RGBA8 with no compression or PackBits                       |
+| TIFF      | libtiff; first directory, strips/tiles, separate/interleaved planes, all orientations, RGB/gray/CMYK uint8/uint16/float32, CIELab/ICCLab uint8/uint16 | libtiff; straight RGBA8 with no compression or PackBits                       |
 | OpenEXR   | OpenEXR; single flat scanline/tiled image, RGB/RGBA or luminance, half/float samples                                      | OpenEXR; scene-linear RGBA half-float with none/ZIPS/ZIP compression          |
 
 HEIF is a container: HEVC and AV1 payloads are bundled, not arbitrary optional
@@ -183,9 +183,10 @@ OpenEXR follows Imcodec's working-colour contract: scene-linear authored
 primaries are converted to extended sRGB. `decodeData` retains HDR values in
 float32; ordinary decoding clips to RGBA8. Deep images, multipart files and
 subsampled colour channels are rejected. TIFF's exact path preserves RGB,
-grayscale and CMYK samples, including high depth, alpha and the source ICC.
-Ordinary decoding converts CMYK to RGBA8 with the conventional approximation
-and omits its source ICC; the compatibility path converts palette and YCbCr.
+grayscale and CMYK samples, including high depth, alpha and the source ICC,
+and CIELab or ICCLab samples in Imcodec's ICC encoding of Lab. Ordinary
+decoding converts CMYK to RGBA8 with the conventional approximation and Lab
+to sRGB from D50, and omits the source ICC; the compatibility path converts palette and YCbCr.
 Both paths undo associated alpha. `NativeTiffDecoder` also accepts
 BigTIFF directly; Imcodec's generic signature detection currently recognizes
 classic TIFF only. JPEG CMYK conversion uses the conventional CMYK-to-RGB

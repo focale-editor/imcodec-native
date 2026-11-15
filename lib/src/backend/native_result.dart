@@ -51,7 +51,7 @@ final class NativeResult {
   DecodedImage toImageData() => DecodedImage(
     width: width,
     height: height,
-    colorModel: colorModel == 1 ? DecodedColorModel.cmyk : DecodedColorModel.rgb,
+    colorModel: _colorModel,
     sampleFormat: switch (depth) {
       8 => DecodedSampleFormat.uint8,
       16 => DecodedSampleFormat.uint16,
@@ -68,9 +68,16 @@ final class NativeResult {
     width: width,
     height: height,
     bitsPerChannel: sourceDepth,
-    colorModel: colorModel == 1 ? DecodedColorModel.cmyk : DecodedColorModel.rgb,
+    colorModel: _colorModel,
     iccProfile: iccProfile,
     exifMetadata: exifMetadata,
     xmpMetadata: xmpMetadata,
   );
+
+  /// Colour model of the native result's code: 1 is CMYK, 2 ICC-encoded Lab.
+  DecodedColorModel get _colorModel => switch (colorModel) {
+    1 => DecodedColorModel.cmyk,
+    2 => DecodedColorModel.lab,
+    _ => DecodedColorModel.rgb,
+  };
 }

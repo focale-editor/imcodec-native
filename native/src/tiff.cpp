@@ -118,6 +118,46 @@ double sample_value(const uint8_t* bytes, uint16_t bits, uint16_t format) {
   }
   return *bytes / 255.0;
 }
+// L*, a* and b* of one stored Lab pixel, from CIELab (signed a* and b*) or
+// ICCLab (a* and b* offset by 128) samples of eight or sixteen bits.
+void lab_values(const uint8_t* bytes, size_t stride, uint16_t bits, bool signed_ab, double values[3]) {
+  const auto unsigned_at = [&](unsigned c) -> unsigned {
+    if (bits == 16) {
+      uint16_t value;
+      std::memcpy(&value, bytes + c * stride, 2);
+      return value;
+    }
+    return bytes[c * stride];
+  };
+  const double scale = bits == 16 ? 65535.0 : 255.0;
+  values[0] = unsigned_at(0) * 100.0 / scale;
+  for (unsigned c = 1; c < 3; ++c) {
+    const unsigned stored = unsigned_at(c);
+    if (signed_ab) {
+      values[c] = bits == 16 ? (stored >= 32768 ? double(stored) - 65536 : double(stored)) / 256 : (stored >= 128 ? double(stored) - 256 : double(stored));
+    } else {
+      values[c] = bits == 16 ? stored / 257.0 - 128 : double(stored) - 128;
+    }
+  }
+}
+
+// Encoded sRGB between 0 and 1 of L*, a* and b* relative to D50, through XYZ
+// with Bradford adaptation to D65. Colours outside sRGB are clipped.
+void lab_to_srgb(double values[3]) {
+  const auto inverse = [](double t) { return t > 6.0 / 29 ? t * t * t : 3 * (6.0 / 29) * (6.0 / 29) * (t - 4.0 / 29); };
+  const auto encode = [](double linear) {
+    const double v = std::clamp(std::isfinite(linear) ? linear : 0.0, 0.0, 1.0);
+    return v <= 0.0031308 ? v * 12.92 : 1.055 * std::pow(v, 1 / 2.4) - 0.055;
+  };
+  const double fy = (values[0] + 16) / 116;
+  const double x = 0.96422 * inverse(fy + values[1] / 500);
+  const double y = inverse(fy);
+  const double z = 0.82521 * inverse(fy - values[2] / 200);
+  values[0] = encode(3.1338561 * x - 1.6168667 * y - 0.4906146 * z);
+  values[1] = encode(-0.9787684 * x + 1.9161415 * y + 0.0334540 * z);
+  values[2] = encode(0.0719453 * x - 0.2289914 * y + 1.4052427 * z);
+}
+
 void store_sample(uint8_t* target, double value, size_t depth) {
   if (depth == 32) {
     const float sample = static_cast<float>(value);
@@ -154,16 +194,17 @@ void read_tiff(imcodec_result& result, const uint8_t* bytes, size_t size,
   uint16_t inks = INKSET_CMYK;
   if (cmyk) TIFFGetFieldDefaulted(image.get(), TIFFTAG_INKSET, &inks);
   if (cmyk && inks != INKSET_CMYK) throw std::runtime_error("Unsupported TIFF ink set");
-  result.color_model = cmyk ? 1 : 0;
+  const bool lab = photometric == PHOTOMETRIC_CIELAB || photometric == PHOTOMETRIC_ICCLAB;
+  result.color_model = cmyk ? 1 : lab ? 2 : 0;
   tiff_blob(image.get(), TIFFTAG_ICCPROFILE, result.buffers[1], limits.icc);
   tiff_blob(image.get(), TIFFTAG_XMLPACKET, result.buffers[3], limits.metadata);
   if (inspect) return;
   const bool rgb = photometric == PHOTOMETRIC_RGB;
   const bool gray = photometric == PHOTOMETRIC_MINISBLACK || photometric == PHOTOMETRIC_MINISWHITE;
-  const unsigned colors = cmyk ? 4 : rgb ? 3 : 1;
-  const bool direct = (rgb || gray || cmyk) && samples >= colors && samples <= colors + 1 &&
-      ((format == SAMPLEFORMAT_UINT && (bits == 8 || bits == 16)) || (format == SAMPLEFORMAT_IEEEFP && bits == 32));
-  if (!direct && limits.preserve && (bits > 8 || cmyk)) throw std::runtime_error("Unsupported exact TIFF sample layout");
+  const unsigned colors = cmyk ? 4 : rgb || lab ? 3 : 1;
+  const bool direct = (rgb || gray || cmyk || lab) && samples >= colors && samples <= colors + 1 &&
+      ((format == SAMPLEFORMAT_UINT && (bits == 8 || bits == 16)) || (!lab && format == SAMPLEFORMAT_IEEEFP && bits == 32));
+  if (!direct && limits.preserve && (bits > 8 || cmyk || lab)) throw std::runtime_error("Unsupported exact TIFF sample layout");
   result.depth = direct && limits.preserve ? bits : 8;
   const size_t output_channels = cmyk && limits.preserve && direct ? 5 : 4;
   result.buffers[0].resize(pixel_bytes(width, height, output_channels * (result.depth / 8), limits.pixels, limits.bytes));
@@ -187,7 +228,7 @@ void read_tiff(imcodec_result& result, const uint8_t* bytes, size_t size,
     if (cmyk) result.buffers[1].clear();
     return;
   }
-  if (cmyk && !limits.preserve) {
+  if ((cmyk || lab) && !limits.preserve) {
     result.color_model = 0;
     result.buffers[1].clear();
   }
@@ -227,12 +268,24 @@ void read_tiff(imcodec_result& result, const uint8_t* bytes, size_t size,
         const size_t offset = planes == 1 ? row * stride + (column * samples + c) * sample_bytes : c * block_size + row * stride + column * sample_bytes;
         values[c] = sample_value(block.data() + offset, bits, format);
       }
+      if (lab) {
+        const size_t first = planes == 1 ? row * stride + column * samples * sample_bytes : row * stride + column * sample_bytes;
+        lab_values(block.data() + first, planes == 1 ? sample_bytes : block_size, bits, photometric == PHOTOMETRIC_CIELAB, values);
+        if (limits.preserve) {
+          // Imcodec's ICC encoding of Lab.
+          values[0] /= 100;
+          values[1] = (values[1] + 128) / 255;
+          values[2] = (values[2] + 128) / 255;
+        } else {
+          lab_to_srgb(values);
+        }
+      }
       const double opacity = alpha ? std::clamp(values[colors], 0.0, 1.0) : 1;
       if (gray) {
         if (photometric == PHOTOMETRIC_MINISWHITE) values[0] = 1 - values[0];
         values[1] = values[2] = values[0];
       }
-      if (associated) for (unsigned c = 0; c < colors; ++c) values[c] = opacity > 0 ? values[c] / opacity : 0;
+      if (associated && !lab) for (unsigned c = 0; c < colors; ++c) values[c] = opacity > 0 ? values[c] / opacity : 0;
       if (cmyk && !limits.preserve) {
         const double black = 1 - values[3];
         for (int c = 0; c < 3; ++c) values[c] = (1 - values[c]) * black;
