@@ -129,17 +129,17 @@ packages:
     dependency: transitive
     description:
       name: imcodec
-      sha256: "8645ac5d08a363d3c9649a148e3c9fd673dc46531fc6c1c403ad86662431c7a6"
+      sha256: "97abcb83e4e89ec86fa9de7b96575c7ba80e06692319df2d4ee876d2318dff75"
       url: "https://pub.dev"
     source: hosted
-    version: "0.5.8"
+    version: "0.5.9"
   imcodec_native:
     dependency: "direct main"
     description:
       path: ".."
       relative: true
     source: path
-    version: "0.2.7"
+    version: "0.2.8"
   integration_test:
     dependency: "direct dev"
     description: flutter
