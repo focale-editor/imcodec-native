@@ -1,5 +1,10 @@
 # 📰 ImcodecNative changelog
 
+## v0.2.8
+Released on November 15, 2026.
+
+* **FEAT**: Now decoding CIELab and ICCLab TIFF images into Imcodec's Lab color model. ([#c228bbd](https://github.com/focale-editor/imcodec-native/commit/c228bbd))
+
 ## v0.2.7
 Released on November 3, 2026.
 
