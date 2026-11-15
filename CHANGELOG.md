@@ -1,5 +1,10 @@
 # 📰 ImcodecNative changelog
 
+## v0.2.9
+Released on November 15, 2026.
+
+* **FIX**: Fixed `imcodec` dependency constraints. ([#ec8c928](https://github.com/focale-editor/imcodec-native/commit/ec8c928))
+
 ## v0.2.8
 Released on November 15, 2026.
 
