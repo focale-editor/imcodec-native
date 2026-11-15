@@ -30,7 +30,7 @@ platforms:
   windows:
 
 dependencies:
-  code_assets: ^2.1.0
+  code_assets: ^2.2.0
   crypto: ^3.0.8
   ffi: ^2.2.0
   flutter:
@@ -43,7 +43,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  release: ^0.1.11
+  release: ^0.2.0
   test: ^1.31.1
 
 release:
